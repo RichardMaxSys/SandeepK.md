@@ -33,6 +33,8 @@ def process_application_package(package_id: int):
             # Analyze ATS after tailoring
             ats_report = await analyze_ats(tailored_text, job.description)
             package.ats_report = ats_report
+            package.recruiter_notes = ats_report.get("recruiter_notes")
+            package.fit_score_explanation = ats_report.get("fit_score_explanation")
 
             package.status = "tailored"
             db.commit()

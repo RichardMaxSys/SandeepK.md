@@ -6,6 +6,7 @@ import { Search, Upload, FileText, CheckCircle, ArrowRight, ExternalLink, Loader
 import { motion } from 'framer-motion';
 import { searchJobs, uploadResume, generatePackage, getPackages, triggerDryRun } from '@/lib/api';
 import { ScoreChart, KeywordChart } from '@/components/ui/charts';
+import { ReviewPanel } from '@/components/ui/review-panel';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('find');
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [resumeId, setResumeId] = useState<number | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
 
   useEffect(() => {
     fetchPackages();
@@ -60,6 +62,12 @@ export default function Dashboard() {
   const handleDryRun = async (jobId: number) => {
     await triggerDryRun(jobId);
     alert('Dry run automation started!');
+  };
+
+  const handleApprove = async (packageId: number) => {
+    // In a real scenario, this would call a backend update endpoint
+    alert('Application package approved!');
+    setSelectedPackage(null);
   };
 
   return (
@@ -159,7 +167,7 @@ export default function Dashboard() {
                   </Card>
                 ) : (
                   packages.map((pkg) => (
-                    <Card key={pkg.id} className="p-8">
+                    <Card key={pkg.id} className="p-8 hover:border-blue-200 transition-all cursor-pointer" onClick={() => setSelectedPackage(pkg)}>
                       <div className="flex justify-between items-start mb-8">
                         <div>
                           <h3 className="font-bold text-2xl text-gray-900">{pkg.job_title}</h3>
@@ -229,6 +237,14 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {selectedPackage && (
+        <ReviewPanel
+          pkg={selectedPackage}
+          onClose={() => setSelectedPackage(null)}
+          onApprove={handleApprove}
+        />
+      )}
     </div>
   );
 }

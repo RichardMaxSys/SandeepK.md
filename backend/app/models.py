@@ -18,6 +18,7 @@ class Job(Base):
     company = Column(String)
     location = Column(String)
     description = Column(Text)
+    description_snapshot = Column(Text) # Original snapshot
     url = Column(String)
     source = Column(String)
     match_score = Column(Float, nullable=True)
@@ -31,7 +32,10 @@ class ApplicationPackage(Base):
     tailored_resume_text = Column(Text)
     cover_letter = Column(Text)
     ats_report = Column(JSON)
+    recruiter_notes = Column(Text)
+    fit_score_explanation = Column(Text)
     status = Column(String, default="draft") # draft, reviewed, applied
+    approved_for_apply = Column(DateTime, nullable=True) # Manual approval timestamp
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     job = relationship("Job")
