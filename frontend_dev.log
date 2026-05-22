@@ -1,0 +1,17 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+   ▲ Next.js 15.0.3
+   - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 1977ms
+ ○ Compiling / ...
+ ⨯ Failed to find font override values for font `Geist`
+ ⨯ Failed to find font override values for font `Geist Mono`
+ ⨯ Failed to find font override values for font `Geist`
+ ⨯ Failed to find font override values for font `Geist Mono`
+ ✓ Compiled / in 13.2s (2392 modules)
+ GET / 200 in 14342ms
