@@ -56,8 +56,9 @@ async def search(query: str, db: Session = Depends(get_db)):
     for job_data in jobs:
         db_job = Job(**job_data)
         db.add(db_job)
+        db.commit()
+        db.refresh(db_job)
         db_jobs.append(db_job)
-    db.commit()
     return db_jobs
 
 @app.post("/generate-package/{job_id}/{resume_id}")

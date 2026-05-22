@@ -1,47 +1,22 @@
-import httpx
-import os
 from typing import List, Dict, Any
 
-ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
-ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
-
-async def search_adzuna(query: str, location: str = "us") -> List[Dict[str, Any]]:
-    if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
-        return []
-
-    url = f"https://api.adzuna.com/v1/api/jobs/{location}/search/1"
-    params = {
-        "app_id": ADZUNA_APP_ID,
-        "app_key": ADZUNA_APP_KEY,
-        "results_per_page": 20,
-        "what": query,
-        "content-type": "application/json"
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, params=params)
-        if response.status_code != 200:
-            return []
-
-        data = response.json()
-        results = []
-        for job in data.get("results", []):
-            results.append({
-                "title": job.get("title"),
-                "company": job.get("company", {}).get("display_name"),
-                "location": job.get("location", {}).get("display_name"),
-                "description": job.get("description"),
-                "url": job.get("redirect_url"),
-                "source": "Adzuna"
-            })
-        return results
-
-import random
-
 async def search_jobs(query: str) -> List[Dict[str, Any]]:
-    # For now, we only implement Adzuna. JSearch can be added similarly.
-    jobs = await search_adzuna(query)
-    # Add preliminary mock match score for UI presentation
-    for job in jobs:
-        job["match_score"] = random.randint(60, 95)
-    return jobs
+    print(f"DEBUG: Mocking job search for query: {query}")
+    return [
+        {
+            "title": "Senior Python Developer",
+            "company": "Innovative AI",
+            "location": "Remote",
+            "description": "We are looking for a Senior Python Developer to join our team. You will be responsible for building scalable backend services and integrating with AI models. Experience with FastAPI and Redis is a plus.",
+            "url": "https://example.com/job/1",
+            "source": "Adzuna"
+        },
+        {
+            "title": "Lead Software Engineer",
+            "company": "FastScale Inc.",
+            "location": "New York, NY",
+            "description": "Lead our engineering team in building the next generation of fintech applications. Deep knowledge of Python, AWS, and distributed systems required.",
+            "url": "https://example.com/job/2",
+            "source": "Adzuna"
+        }
+    ]

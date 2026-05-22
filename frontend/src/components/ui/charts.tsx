@@ -11,8 +11,8 @@ export const ScoreChart = ({ score, label }: { score: number; label: string }) =
   const COLORS = ['#2563eb', '#f3f4f6'];
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="h-32 w-32 relative">
+    <div className="flex flex-col items-center min-w-[120px]">
+      <div className="h-28 w-28 relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
