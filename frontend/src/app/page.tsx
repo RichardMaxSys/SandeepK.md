@@ -75,7 +75,7 @@ export default function Dashboard() {
               <Upload size={18} />
               {resumeId ? 'Update Resume' : 'Upload Master Resume'}
             </div>
-            <input type="file" className="hidden" onChange={handleUpload} accept=".txt" />
+            <input type="file" className="hidden" onChange={handleUpload} accept=".txt,.pdf" />
           </label>
         </header>
 
@@ -162,8 +162,9 @@ export default function Dashboard() {
                     <Card key={pkg.id} className="p-8">
                       <div className="flex justify-between items-start mb-8">
                         <div>
-                          <h3 className="font-bold text-2xl text-gray-900">Application Package #{pkg.id}</h3>
-                          <p className="text-gray-500 font-medium mt-1">Status: <span className="text-blue-600 capitalize">{pkg.status}</span></p>
+                          <h3 className="font-bold text-2xl text-gray-900">{pkg.job_title}</h3>
+                          <p className="text-gray-600 font-semibold">{pkg.job_company}</p>
+                          <p className="text-gray-400 text-sm mt-1">Status: <span className="text-blue-600 capitalize font-bold">{pkg.status}</span></p>
                         </div>
                         <div className="flex gap-3">
                           <Button variant="outline" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/download/${pkg.id}/pdf`, '_blank')}>Download PDF</Button>
@@ -172,15 +173,38 @@ export default function Dashboard() {
                       </div>
 
                       {pkg.ats_report && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-gray-50 rounded-2xl">
-                          <ScoreChart score={pkg.ats_report.score || 0} label="ATS Score" />
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 p-6 bg-gray-50 rounded-2xl">
+                          <ScoreChart score={pkg.ats_report.score || 0} label="Match Score" />
+                          <ScoreChart score={pkg.ats_report.readability_score || 0} label="Readability" />
                           <ScoreChart score={pkg.ats_report.resume_strength_score || 0} label="Resume Strength" />
                           <div className="flex flex-col justify-center">
-                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Keyword Analysis</h4>
+                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2">Keywords</h4>
                             <KeywordChart
                               present={pkg.ats_report.present_keywords?.length || 0}
                               missing={pkg.ats_report.missing_keywords?.length || 0}
                             />
+                          </div>
+                        </div>
+                      )}
+
+                      {pkg.ats_report && (
+                        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Recruiter Feedback</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed bg-white p-4 rounded-xl border border-gray-100 italic">
+                              "{pkg.ats_report.recruiter_feedback}"
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Improvement Tips</h4>
+                            <ul className="space-y-2">
+                              {pkg.ats_report.improvement_suggestions?.slice(0, 3).map((tip: string, i: number) => (
+                                <li key={i} className="text-sm text-gray-600 flex gap-2">
+                                  <ArrowRight size={16} className="text-blue-500 shrink-0" />
+                                  {tip}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         </div>
                       )}

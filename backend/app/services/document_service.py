@@ -35,25 +35,28 @@ def generate_docx(content_text: str) -> io.BytesIO:
     return file_stream
 
 def generate_pdf(content_text: str) -> io.BytesIO:
-    # Improved HTML template for professional look
+    # Premium Recruiter-Grade HTML Template
     sections = content_text.split('\n')
     styled_content = ""
     for line in sections:
         line = line.strip()
         if not line:
             continue
-        if line.isupper() and len(line) < 50:
-            styled_content += f"<h2 style='color: #003366; border-bottom: 1px solid #ccc; margin-top: 20px;'>{line}</h2>"
+        if line.isupper() and len(line) < 60:
+            styled_content += f"<h2 style='color: #1e3a8a; border-bottom: 2px solid #e5e7eb; margin-top: 24px; margin-bottom: 12px; font-weight: 700; font-size: 14pt; letter-spacing: 0.05em;'>{line}</h2>"
+        elif line.startswith('•') or line.startswith('-'):
+            styled_content += f"<li style='margin-bottom: 6px; margin-left: 20px; list-style-type: disc;'>{line.lstrip('•- ')}</li>"
         else:
-            styled_content += f"<p style='margin: 5px 0;'>{line}</p>"
+            styled_content += f"<p style='margin-bottom: 8px; font-size: 11pt;'>{line}</p>"
 
     html_content = f"""
     <html>
         <head>
             <style>
-                body {{ font-family: 'Helvetica', 'Arial', sans-serif; line-height: 1.5; margin: 50px; color: #333; }}
-                h2 {{ font-size: 16px; text-transform: uppercase; }}
-                p {{ font-size: 11pt; }}
+                @page {{ margin: 0.75in; }}
+                body {{ font-family: 'Inter', 'Helvetica', 'Arial', sans-serif; line-height: 1.6; color: #111827; }}
+                h2 {{ text-transform: uppercase; }}
+                li {{ font-size: 11pt; }}
             </style>
         </head>
         <body>

@@ -73,7 +73,20 @@ async def generate_package(job_id: int, resume_id: int, db: Session = Depends(ge
 
 @app.get("/packages")
 async def list_packages(db: Session = Depends(get_db)):
-    return db.query(ApplicationPackage).all()
+    # Join with Job to get titles for the UI
+    packages = db.query(ApplicationPackage).order_by(ApplicationPackage.created_at.desc()).all()
+    result = []
+    for pkg in packages:
+        job = db.query(Job).get(pkg.job_id)
+        result.append({
+            "id": pkg.id,
+            "status": pkg.status,
+            "created_at": pkg.created_at,
+            "job_title": job.title if job else "Unknown",
+            "job_company": job.company if job else "Unknown",
+            "ats_report": pkg.ats_report
+        })
+    return result
 
 @app.post("/dry-run/{job_id}")
 async def dry_run(job_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
