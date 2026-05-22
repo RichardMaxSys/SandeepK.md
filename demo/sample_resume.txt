@@ -1,0 +1,24 @@
+JOHN DOE
+Senior Software Engineer | New York, NY
+john.doe@example.com | 555-0199 | linkedin.com/in/johndoe
+
+PROFESSIONAL SUMMARY
+Innovative Software Engineer with 8+ years of experience in building scalable web applications. Expert in Python, FastAPI, and React. Proven track record of leading teams and delivering high-impact features for FAANG companies.
+
+EXPERIENCE
+Tech Giant Corp | Senior Software Engineer | 2018 - Present
+- Spearheaded the redesign of the core messaging service, increasing throughput by 40% using FastAPI and Redis.
+- Orchestrated the migration of legacy monolith to microservices architecture, reducing deployment time by 50%.
+- Led a team of 10 engineers to deliver a new real-time analytics dashboard used by 1M+ active users.
+
+Startup Innovation | Fullstack Developer | 2015 - 2018
+- Engineered a customer onboarding flow that increased conversion rate by 15% through A/B testing and React optimization.
+- Optimized database queries in PostgreSQL, resulting in a 30% reduction in API latency.
+
+SKILLS
+Languages: Python, JavaScript, SQL, Go
+Frameworks: FastAPI, React, Next.js, Django
+Tools: Docker, Kubernetes, AWS, Redis, PostgreSQL
+
+EDUCATION
+BS in Computer Science | University of Technology | 2015

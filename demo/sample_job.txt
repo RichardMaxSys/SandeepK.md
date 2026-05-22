@@ -1,0 +1,18 @@
+JOB TITLE: Senior Python Developer
+COMPANY: FutureTech Solutions
+LOCATION: Remote / New York
+
+ABOUT THE ROLE:
+We are looking for a Senior Python Developer to join our core backend team. You will be responsible for designing and implementing high-performance APIs and orchestrating complex data workflows.
+
+REQUIREMENTS:
+- 5+ years of experience with Python and FastAPI.
+- Strong knowledge of PostgreSQL and Redis.
+- Experience with Docker and Kubernetes in a production environment.
+- Proven ability to lead technical projects and mentor junior developers.
+- Excellent communication skills and a growth mindset.
+
+BONUS:
+- Experience with React or Next.js.
+- Knowledge of Go or Rust.
+- Previous experience in a FAANG environment.

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, Button } from '@/components/ui/base';
+import { Card, Button, cn } from '@/components/ui/base';
 import { X, CheckCircle, AlertTriangle, FileText, Info } from 'lucide-react';
 import { ScoreChart } from './charts';
 
@@ -148,7 +148,3 @@ export const ReviewPanel = ({ pkg, onClose, onApprove }: { pkg: any; onClose: ()
     </div>
   );
 };
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}

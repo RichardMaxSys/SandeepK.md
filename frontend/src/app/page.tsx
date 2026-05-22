@@ -201,7 +201,7 @@ export default function Dashboard() {
                           <div>
                             <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Recruiter Feedback</h4>
                             <p className="text-gray-600 text-sm leading-relaxed bg-white p-4 rounded-xl border border-gray-100 italic">
-                              "{pkg.ats_report.recruiter_feedback}"
+                              "{pkg.ats_report.recruiter_notes}"
                             </p>
                           </div>
                           <div>
