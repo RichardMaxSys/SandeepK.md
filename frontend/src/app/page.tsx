@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Card, cn } from '@/components/ui/base';
 import { Search, Upload, FileText, CheckCircle, ArrowRight, ExternalLink, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { searchJobs, uploadResume, generatePackage, getPackages, triggerDryRun } from '@/lib/api';
+import { searchJobs, uploadResume, generatePackage, getPackages, triggerDryRun, approvePackage } from '@/lib/api';
 import { ScoreChart, KeywordChart } from '@/components/ui/charts';
 import { ReviewPanel } from '@/components/ui/review-panel';
 
@@ -59,15 +59,16 @@ export default function Dashboard() {
     fetchPackages();
   };
 
-  const handleDryRun = async (jobId: number) => {
-    await triggerDryRun(jobId);
+  const handleDryRun = async (packageId: number) => {
+    await triggerDryRun(packageId);
     alert('Dry run automation started!');
   };
 
   const handleApprove = async (packageId: number) => {
-    // In a real scenario, this would call a backend update endpoint
+    await approvePackage(packageId);
     alert('Application package approved!');
     setSelectedPackage(null);
+    fetchPackages();
   };
 
   return (
@@ -143,7 +144,6 @@ export default function Dashboard() {
                         </div>
                         <div className="flex gap-2">
                           <Button className="flex-1 text-xs" onClick={() => handleTailor(job.id)}>Tailor Resume</Button>
-                          <Button variant="outline" className="text-xs" onClick={() => handleDryRun(job.id)}>Dry Run</Button>
                           <Button variant="outline" className="text-xs" onClick={() => window.open(job.url, '_blank')}>
                             <ExternalLink size={14} />
                           </Button>
@@ -175,8 +175,9 @@ export default function Dashboard() {
                           <p className="text-gray-400 text-sm mt-1">Status: <span className="text-blue-600 capitalize font-bold">{pkg.status}</span></p>
                         </div>
                         <div className="flex gap-3">
-                          <Button variant="outline" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/download/${pkg.id}/pdf`, '_blank')}>Download PDF</Button>
-                          <Button variant="outline" onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/download/${pkg.id}/docx`, '_blank')}>Download DOCX</Button>
+                          <Button variant="primary" className="text-xs bg-green-600 hover:bg-green-700" onClick={(e) => { e.stopPropagation(); handleDryRun(pkg.id); }}>Dry Run Apply</Button>
+                          <Button variant="outline" onClick={(e) => { e.stopPropagation(); window.open(`${process.env.NEXT_PUBLIC_API_URL}/download/${pkg.id}/pdf`, '_blank'); }}>PDF</Button>
+                          <Button variant="outline" onClick={(e) => { e.stopPropagation(); window.open(`${process.env.NEXT_PUBLIC_API_URL}/download/${pkg.id}/docx`, '_blank'); }}>DOCX</Button>
                         </div>
                       </div>
 

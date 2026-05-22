@@ -32,8 +32,15 @@ export function getDownloadUrl(packageId: number, format: 'pdf' | 'docx') {
   return `${API_BASE_URL}/download/${packageId}/${format}`;
 }
 
-export async function triggerDryRun(jobId: number) {
-  const response = await fetch(`${API_BASE_URL}/dry-run/${jobId}`, {
+export async function triggerDryRun(packageId: number) {
+  const response = await fetch(`${API_BASE_URL}/dry-run/${packageId}`, {
+    method: 'POST',
+  });
+  return response.json();
+}
+
+export async function approvePackage(packageId: number) {
+  const response = await fetch(`${API_BASE_URL}/approve-package/${packageId}`, {
     method: 'POST',
   });
   return response.json();

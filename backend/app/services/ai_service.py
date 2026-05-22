@@ -1,48 +1,6 @@
-import os
 import json
-import httpx
-import asyncio
 from typing import Dict, Any
-
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-async def call_llm(prompt: str, model: str = "google/gemini-2.0-flash-001", retries: int = 3) -> str:
-    if not OPENROUTER_API_KEY:
-        return "Error: OPENROUTER_API_KEY not set."
-
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/job-assistant", # Required by some OpenRouter models
-    }
-
-    data = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "You are a professional career assistant and ATS expert."},
-            {"role": "user", "content": prompt}
-        ]
-    }
-
-    for attempt in range(retries):
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(OPENROUTER_URL, headers=headers, json=data, timeout=60.0)
-                if response.status_code == 429: # Rate limit
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                response.raise_for_status()
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
-        except Exception as e:
-            if attempt == retries - 1:
-                # Fallback to a cheaper/more stable model on final attempt
-                if model != "anthropic/claude-3-haiku":
-                    return await call_llm(prompt, model="anthropic/claude-3-haiku", retries=1)
-                raise e
-            await asyncio.sleep(1)
-    return "Error: AI call failed after retries."
+from .llm_provider import call_llm
 
 async def parse_resume(resume_text: str) -> Dict[str, Any]:
     # Use cheaper model for parsing
@@ -66,9 +24,9 @@ async def parse_resume(resume_text: str) -> Dict[str, Any]:
     except Exception:
         return {"error": "Failed to parse resume", "raw": response}
 
-async def tailor_resume(resume_text: str, job_description: str) -> str:
+async def tailor_resume(resume_text: str, job_description: str, industry: str = "General", region: str = "US") -> str:
     prompt = f"""
-    You are an elite Executive Career Coach and Recruiter with 20+ years of experience in top-tier talent acquisition.
+    You are an elite Executive Career Coach and Recruiter specializing in the {industry} industry for the {region} market.
     Your task is to rewrite the provided resume to be a high-impact, recruiter-grade document tailored for the job description.
 
     STRICT OUTPUT GUIDELINES (RECRUITER-QUALITY):
@@ -78,6 +36,8 @@ async def tailor_resume(resume_text: str, job_description: str) -> str:
     4. BREVITY & PUNCH: Keep bullet points to 1-2 lines maximum. Eliminate fluff and "responsible for".
     5. PROFESSIONAL SUMMARY: A 3-sentence powerful hook. Line 1: Who you are (Years + Role). Line 2: Your biggest achievement. Line 3: How you solve the specific problems in the job description.
     6. ATS OPTIMIZATION: Use keywords naturally. Do not keyword stuff. Ensure headers are standard (e.g., "Professional Experience", "Skills", "Education").
+    7. REGIONAL STANDARDS: Follow {region} resume conventions (e.g., US/Canada resumes should not include photos, age, or marital status).
+    8. INDUSTRY BENCHMARKS: Adhere to {industry} standards (e.g., FAANG-tech should focus on scale and complexity; Consulting should focus on framework usage and client impact).
 
     Maintain 100% truthfulness. Do not hallucinate experiences.
     Output ONLY the tailored resume content in a clean, professional format.
@@ -112,7 +72,7 @@ async def generate_cover_letter(resume_text: str, job_description: str) -> str:
 async def analyze_ats(resume_text: str, job_description: str) -> Dict[str, Any]:
     # Use medium model for analysis
     prompt = f"""
-    Perform a deep ATS (Applicant Tracking System) analysis between the resume and the job description.
+    Perform a deep ATS (Applicant Tracking System) and Job Intelligence analysis.
     Evaluate the following with extreme precision:
     1. Keyword Match: Identify present and missing industry-specific keywords. Check for keyword density.
     2. Formatting Validation: Detect risks (tables, text in images, columns, non-standard fonts, contact info in headers).
@@ -122,6 +82,8 @@ async def analyze_ats(resume_text: str, job_description: str) -> Dict[str, Any]:
     6. Section Hierarchy: Validate logical flow (e.g., Summary -> Experience -> Skills -> Education).
     7. ATS Simulation: Flag if the resume would likely fail a common parser (e.g., Greenhouse, Workday).
     8. Over-Optimization: Flag if keyword stuffing or "hidden text" is detected.
+    9. Job Quality Intelligence: Detect signs of job scams, "ghost jobs", or unrealistic expectations.
+    10. Recruiter Likelihood: Score (0-100) the probability of a recruiter calling based on JD alignment.
 
     Return the result as ONLY valid JSON with the following structure:
     {{
@@ -130,12 +92,15 @@ async def analyze_ats(resume_text: str, job_description: str) -> Dict[str, Any]:
         "readability_score": number,
         "recruiter_read_time_seconds": number,
         "resume_strength_score": number,
+        "recruiter_likelihood_score": number,
         "missing_keywords": [string],
         "present_keywords": [string],
         "missing_skills": [string],
         "formatting_risks": [string],
         "section_hierarchy_valid": boolean,
         "over_optimization_detected": boolean,
+        "is_potential_scam": boolean,
+        "job_quality_score": number,
         "ats_parsing_risk_level": "low" | "medium" | "high",
         "fit_score_explanation": string,
         "improvement_suggestions": [string],
@@ -162,12 +127,15 @@ async def analyze_ats(resume_text: str, job_description: str) -> Dict[str, Any]:
             "readability_score": 0,
             "recruiter_read_time_seconds": 0,
             "resume_strength_score": 0,
+            "recruiter_likelihood_score": 0,
             "missing_keywords": [],
             "present_keywords": [],
             "missing_skills": [],
             "formatting_risks": ["Error parsing AI response"],
             "section_hierarchy_valid": False,
             "over_optimization_detected": False,
+            "is_potential_scam": False,
+            "job_quality_score": 0,
             "ats_parsing_risk_level": "high",
             "fit_score_explanation": "Error during analysis.",
             "improvement_suggestions": [],

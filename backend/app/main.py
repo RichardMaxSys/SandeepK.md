@@ -11,6 +11,7 @@ from .services.document_service import generate_docx, generate_pdf
 from .services.automation_service import run_dry_run
 from fastapi.responses import StreamingResponse
 import io
+import datetime
 from pdfminer.high_level import extract_text as extract_pdf_text
 
 Base.metadata.create_all(bind=engine)
@@ -84,21 +85,36 @@ async def list_packages(db: Session = Depends(get_db)):
             "created_at": pkg.created_at,
             "job_title": job.title if job else "Unknown",
             "job_company": job.company if job else "Unknown",
+            "tailored_resume_text": pkg.tailored_resume_text,
             "ats_report": pkg.ats_report
         })
     return result
 
-@app.post("/dry-run/{job_id}")
-async def dry_run(job_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    job = db.query(Job).get(job_id)
-    if not job:
-        return {"error": "Job not found"}
+@app.post("/dry-run/{package_id}")
+async def dry_run(package_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    package = db.query(ApplicationPackage).get(package_id)
+    if not package:
+        return {"error": "Package not found"}
 
-    # In a real scenario, we'd fetch the user's latest resume or structured data
-    mock_user_data = {"full_name": "User Name", "email": "user@example.com"}
+    job = db.query(Job).get(package.job_id)
+    resume = db.query(Resume).get(package.resume_id)
 
-    background_tasks.add_task(run_dry_run, job.url, mock_user_data)
+    # Extract data from structured profile
+    user_data = resume.structured_data.get("contact_info", {})
+
+    background_tasks.add_task(run_dry_run, job.url, user_data)
     return {"message": "Dry run started"}
+
+@app.post("/approve-package/{package_id}")
+async def approve_package(package_id: int, db: Session = Depends(get_db)):
+    package = db.query(ApplicationPackage).get(package_id)
+    if not package:
+        return {"error": "Package not found"}
+
+    package.status = "approved"
+    package.approved_for_apply = datetime.datetime.utcnow()
+    db.commit()
+    return {"message": "Package approved"}
 
 @app.get("/download/{package_id}/{format}")
 async def download_package(package_id: int, format: str, db: Session = Depends(get_db)):

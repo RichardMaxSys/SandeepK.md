@@ -6,6 +6,7 @@ import { X, CheckCircle, AlertTriangle, FileText, Info } from 'lucide-react';
 import { ScoreChart } from './charts';
 
 export const ReviewPanel = ({ pkg, onClose, onApprove }: { pkg: any; onClose: () => void; onApprove: (id: number) => void }) => {
+  const [view, setView] = React.useState<'analysis' | 'resume'>('analysis');
   const ats = pkg.ats_report || {};
 
   return (
@@ -21,7 +22,26 @@ export const ReviewPanel = ({ pkg, onClose, onApprove }: { pkg: any; onClose: ()
           </button>
         </div>
 
+        <div className="p-4 bg-white border-b border-gray-100 flex gap-4">
+          <Button
+            variant={view === 'analysis' ? 'primary' : 'outline'}
+            onClick={() => setView('analysis')}
+            className="flex-1"
+          >
+            Intelligence Analysis
+          </Button>
+          <Button
+            variant={view === 'resume' ? 'primary' : 'outline'}
+            onClick={() => setView('resume')}
+            className="flex-1"
+          >
+            Resume Preview
+          </Button>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-8 bg-gray-50 space-y-8">
+          {view === 'analysis' ? (
+          <>
           {/* Executive Summary & Scores */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="p-6 col-span-2 space-y-4">
@@ -92,6 +112,23 @@ export const ReviewPanel = ({ pkg, onClose, onApprove }: { pkg: any; onClose: ()
               </div>
             </Card>
           </div>
+
+          {/* Scams & Quality */}
+          {ats.is_potential_scam && (
+            <Card className="p-4 border-red-200 bg-red-50 flex gap-4 items-center text-red-700">
+              <AlertTriangle size={24} />
+              <div>
+                <h4 className="font-bold">Potential Scam Detected</h4>
+                <p className="text-sm">This job listing has indicators of being fraudulent or a "ghost job". Proceed with caution.</p>
+              </div>
+            </Card>
+          )}
+          </>
+          ) : (
+            <Card className="p-12 bg-white shadow-inner font-mono text-sm leading-relaxed whitespace-pre-wrap">
+              {pkg.tailored_resume_text || "Resume tailoring in progress..."}
+            </Card>
+          )}
         </div>
 
         <div className="p-6 bg-white border-t border-gray-100 flex justify-between items-center">

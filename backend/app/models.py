@@ -34,7 +34,8 @@ class ApplicationPackage(Base):
     ats_report = Column(JSON)
     recruiter_notes = Column(Text)
     fit_score_explanation = Column(Text)
-    status = Column(String, default="draft") # draft, reviewed, applied
+    status = Column(String, default="draft") # draft, reviewed, applied, interview, offer, rejected
+    outcome = Column(String, nullable=True) # Success tracking
     approved_for_apply = Column(DateTime, nullable=True) # Manual approval timestamp
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
