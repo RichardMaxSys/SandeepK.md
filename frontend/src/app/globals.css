@@ -2,20 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1a1a2e;
+  --foreground: #e8e8ee;
+  --card: #1e2746;
+  --card-border: #2a3558;
+  --accent: #00d4aa;
+  --accent-hover: #00e8bb;
+  --muted: #8892a4;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #10b981;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3558;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4a7a;
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 212, 170, 0.25);
+  color: #ffffff;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #00d4aa;
+  outline-offset: 2px;
+}
+
+/* Input base reset */
+input, textarea, select {
+  background-color: #16213e;
+  border: 1px solid #2a3558;
+  color: #e8e8ee;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #00d4aa;
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+  outline: none;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #5d75ab;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
