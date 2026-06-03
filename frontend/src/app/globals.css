@@ -17,12 +17,14 @@
   --success: #10b981;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  height: 100%;
 }
 
 body {
@@ -31,6 +33,14 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+#__next {
+  height: 100%;
 }
 
 /* Custom scrollbar */

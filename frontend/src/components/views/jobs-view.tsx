@@ -340,7 +340,7 @@ export function JobsView({
   return (
     <div className="pb-8 space-y-0">
       {/* === TOP SEARCH BAR (Indeed.ca style, sticky) === */}
-      <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-0 pb-4 bg-charcoal/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 pb-4 bg-charcoal/95 backdrop-blur-sm">
         <form onSubmit={handleSearchSubmit}>
           <div className="flex flex-col sm:flex-row gap-2">
             {/* What field */}

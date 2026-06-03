@@ -193,7 +193,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal flex">
+    <div className="h-screen flex overflow-hidden bg-charcoal">
+      {/* Sidebar — fixed on mobile, static on desktop */}
       <Sidebar
         activeView={activeView}
         onViewChange={setActiveView}
@@ -201,21 +202,24 @@ export default function Home() {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar
           title={viewTitles[activeView]}
           onMenuToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
-        <main className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 pb-20 lg:pb-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 lg:px-6 py-6 pb-24 lg:pb-8">
           <div className="max-w-7xl mx-auto">
             {renderView()}
           </div>
         </main>
       </div>
 
+      {/* Mobile bottom navigation */}
       <MobileBottomNav activeView={activeView} onViewChange={setActiveView} />
 
+      {/* Review panel modal overlay */}
       {selectedPackage && (
         <ReviewPanel
           pkg={selectedPackage}

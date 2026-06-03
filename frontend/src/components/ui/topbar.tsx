@@ -12,7 +12,7 @@ export function Topbar({
   onMenuToggle: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 lg:px-6 bg-charcoal/95 backdrop-blur-sm border-b border-surface-border">
+    <header className="flex items-center justify-between h-16 px-4 lg:px-6 bg-charcoal/95 backdrop-blur-sm border-b border-surface-border shrink-0">
       {/* Left: Menu button + Title */}
       <div className="flex items-center gap-4">
         <button

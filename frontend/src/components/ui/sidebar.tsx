@@ -37,9 +37,8 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        'fixed lg:static inset-y-0 left-0 z-30 flex flex-col bg-charcoal border-r border-surface-border transition-all duration-300',
-        collapsed ? 'w-[72px]' : 'w-60',
-        'hidden lg:flex'
+        'hidden lg:flex flex-col bg-charcoal border-r border-surface-border transition-all duration-300 shrink-0 h-full',
+        collapsed ? 'w-[72px]' : 'w-60'
       )}
     >
       {/* Logo */}
@@ -84,7 +83,7 @@ export function Sidebar({
       </nav>
 
       {/* Collapse button */}
-      <div className="border-t border-surface-border p-3">
+      <div className="border-t border-surface-border p-3 shrink-0">
         <button
           onClick={onToggle}
           className={cn(
@@ -108,7 +107,7 @@ export function MobileBottomNav({
   onViewChange: (view: ViewType) => void;
 }) {
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-charcoal border-t border-surface-border flex items-center justify-around px-2 py-2">
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-charcoal border-t border-surface-border flex items-center justify-around px-2 py-2 safe-area-pb">
       {navItems.map((item) => (
         <button
           key={item.id}
