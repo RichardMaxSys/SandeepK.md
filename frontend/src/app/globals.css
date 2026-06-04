@@ -2,99 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 :root {
-  --background: #1a1a2e;
-  --foreground: #e8e8ee;
-  --card: #1e2746;
-  --card-border: #2a3558;
-  --accent: #00d4aa;
-  --accent-hover: #00e8bb;
-  --muted: #8892a4;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #10b981;
+  --background: #0a0e1a;
+  --foreground: #e6ebf5;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --accent: #14b8a6;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
+* {
+  border-color: var(--line);
 }
 
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
-  height: 100%;
-}
-
+html,
 body {
-  color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--foreground);
+  font-family: var(--font-sans), Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  height: 100%;
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
+  text-rendering: optimizeLegibility;
 }
 
-#__next {
-  height: 100%;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2a3558;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3a4a7a;
-}
-
-/* Selection */
 ::selection {
-  background: rgba(0, 212, 170, 0.25);
+  background: rgba(20, 184, 166, 0.3);
   color: #ffffff;
 }
 
-/* Focus ring */
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* Focus rings */
 *:focus-visible {
-  outline: 2px solid #00d4aa;
+  outline: 2px solid rgba(20, 184, 166, 0.55);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
-/* Input base reset */
-input, textarea, select {
-  background-color: #16213e;
-  border: 1px solid #2a3558;
-  color: #e8e8ee;
-  border-radius: 8px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+/* Utility: subtle gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #5eead4 0%, #38b2ac 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-input:focus, textarea:focus, select:focus {
-  border-color: #00d4aa;
-  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
-  outline: none;
+/* Utility: noise / grain overlay for premium feel */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
-input::placeholder, textarea::placeholder {
-  color: #5d75ab;
+/* Loading shimmer */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
