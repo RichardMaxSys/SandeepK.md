@@ -4,23 +4,46 @@ import * as React from "react";
 import { motion } from "framer-motion";
 import {
   Upload, FileText, AlertCircle, AlertTriangle, CheckCircle2, X, Sparkles, Lightbulb,
-  Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight,
+  Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight, ArrowLeft, Download,
+  FileSignature, Wand2, Check, Briefcase,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
 import { runAts, GENERIC_PHRASES, type AtsReport } from "@/lib/ats-engine";
-import { useResume } from "@/lib/resume-store";
+import { useResume, BASE_VERSION } from "@/lib/resume-store";
+import { VersionSelector } from "@/components/version-selector";
 
 export const CheckView: React.FC = () => {
-  const { resume } = useResume();
+  const { resume, versions, activeVersionId, setActiveVersion, versionList } = useResume();
   const [report, setReport] = React.useState<AtsReport>(() => runAts(resume));
+  const [baseReport, setBaseReport] = React.useState<AtsReport | null>(null);
   const [jdDraft, setJdDraft] = React.useState<string>("");
   const [analyzing, setAnalyzing] = React.useState(false);
   const [jdActive, setJdActive] = React.useState<boolean>(false);
+
+  const activeVersion = versions[activeVersionId];
+  const baseVersion = versions[BASE_VERSION];
+  const isTailored = activeVersion?.source === "tailored";
+  const savedJd = isTailored ? activeVersion.jd ?? "" : "";
+
+  // Default the JD field to the version's saved JD if tailored
+  React.useEffect(() => {
+    if (isTailored && savedJd) setJdDraft(savedJd);
+  }, [isTailored, savedJd]);
 
   // Recompute on resume change (live)
   React.useEffect(() => {
     if (!jdActive) setReport(runAts(resume));
   }, [resume, jdActive]);
+
+  // Recompute base comparison when active is a tailored version
+  React.useEffect(() => {
+    if (isTailored && baseVersion) {
+      setBaseReport(runAts(baseVersion.data, jdActive ? jdDraft : savedJd));
+    } else {
+      setBaseReport(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTailored, activeVersionId, jdActive]);
 
   const runWithJd = () => {
     if (!jdDraft.trim()) { setJdActive(false); setReport(runAts(resume)); return; }
@@ -28,9 +51,22 @@ export const CheckView: React.FC = () => {
     setJdActive(true);
     setTimeout(() => {
       setReport(runAts(resume, jdDraft));
+      if (isTailored && baseVersion) setBaseReport(runAts(baseVersion.data, jdDraft));
       setAnalyzing(false);
     }, 600);
   };
+
+  // For the "default to most recent tailored" on first mount
+  const firstRun = React.useRef(true);
+  React.useEffect(() => {
+    if (!firstRun.current) return;
+    firstRun.current = false;
+    const mostRecentTailored = versionList.find((v) => v.source === "tailored");
+    if (mostRecentTailored && activeVersion?.source === "base") {
+      setActiveVersion(mostRecentTailored.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const allIssues = React.useMemo(() => {
     const out: { dimension: string; severity: "high" | "medium" | "low"; message: string }[] = [];
@@ -45,14 +81,89 @@ export const CheckView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <p className="text-2xs font-medium uppercase tracking-wider text-accent-300">Check</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">ATS Check</h1>
-        <p className="mt-1 text-sm text-ink-muted max-w-2xl">
-          We measure four signals that real ATS systems use as proxies: parseability, keyword match, formatting hygiene, and content quality.{" "}
-          <span className="text-ink">No magic number</span> — every dimension tells you exactly what to fix.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <p className="text-2xs font-medium uppercase tracking-wider text-accent-300">Check</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">ATS Check</h1>
+          <p className="mt-1 text-sm text-ink-muted max-w-2xl">
+            We measure four signals that real ATS systems use as proxies: parseability, keyword match, formatting hygiene, and content quality.{" "}
+            <span className="text-ink">No magic number</span> — every dimension tells you exactly what to fix.
+          </p>
+        </div>
+        <VersionSelector />
       </div>
+
+      {/* Base comparison + version info */}
+      {isTailored && baseReport && (
+        <Card className="p-5 border-violet-500/20 bg-violet-500/[0.04]">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-7 w-7 rounded-md bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
+              <Briefcase size={13} className="text-violet-300" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold text-ink">Tailored version check</h2>
+              <p className="text-2xs text-ink-muted">
+                Comparing <span className="text-ink font-medium">{activeVersion?.label}</span> against the base resume
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-line bg-canvas-subtle p-3">
+              <p className="text-2xs font-medium uppercase tracking-wider text-ink-subtle">Base</p>
+              <p className="text-3xl font-semibold text-ink mt-1 tabular-nums">{baseReport.overall}</p>
+            </div>
+            <div className="rounded-xl border border-line bg-canvas-subtle p-3">
+              <p className="text-2xs font-medium uppercase tracking-wider text-ink-subtle">This version</p>
+              <p className={cn(
+                "text-3xl font-semibold mt-1 tabular-nums",
+                report.overall >= 80 ? "text-success" : report.overall >= 60 ? "text-accent-300" : report.overall >= 40 ? "text-amber-300" : "text-danger",
+              )}>{report.overall}</p>
+            </div>
+            <div className="rounded-xl border border-line bg-canvas-subtle p-3">
+              <p className="text-2xs font-medium uppercase tracking-wider text-ink-subtle">Delta</p>
+              <p className={cn(
+                "text-3xl font-semibold mt-1 tabular-nums",
+                report.overall > baseReport.overall ? "text-success" : report.overall < baseReport.overall ? "text-danger" : "text-ink-muted",
+              )}>
+                {report.overall > baseReport.overall ? "+" : ""}{report.overall - baseReport.overall}
+              </p>
+            </div>
+          </div>
+
+          {/* Per-dimension improvement list */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+            {Object.values(report.dimensions).map((d) => {
+              const baseDim = baseReport.dimensions[d.key];
+              const delta = d.score - baseDim.score;
+              if (delta === 0 && d.score < 80) {
+                return (
+                  <div key={d.key} className="flex items-center gap-2 text-2xs px-2.5 py-1.5 rounded-md border border-line bg-canvas-subtle/50 text-ink-muted">
+                    <span className="text-ink-muted tabular-nums w-4 text-center">·</span>
+                    <span className="flex-1">{d.label}: no change ({d.score})</span>
+                  </div>
+                );
+              }
+              if (delta > 0) {
+                return (
+                  <div key={d.key} className="flex items-center gap-2 text-2xs px-2.5 py-1.5 rounded-md border border-success/20 bg-success/[0.04] text-success/90">
+                    <span className="font-semibold tabular-nums w-4 text-center">+{delta}</span>
+                    <span className="flex-1 text-ink">{d.label} improved ({baseDim.score} → {d.score})</span>
+                  </div>
+                );
+              }
+              if (delta < 0) {
+                return (
+                  <div key={d.key} className="flex items-center gap-2 text-2xs px-2.5 py-1.5 rounded-md border border-danger/20 bg-danger/[0.04] text-danger/90">
+                    <span className="font-semibold tabular-nums w-4 text-center">{delta}</span>
+                    <span className="flex-1 text-ink">{d.label} dropped ({baseDim.score} → {d.score})</span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Optional JD input */}
       <Card className="p-4">
@@ -249,6 +360,50 @@ export const CheckView: React.FC = () => {
           ))}
         </aside>
       </div>
+
+      {/* Final CTA: Go back to Tailor OR Download */}
+      <Card className="p-5 bg-gradient-to-br from-canvas-raised via-canvas-raised to-accent-500/[0.04] border-accent-500/20">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-start gap-3 flex-1">
+            <div className="h-10 w-10 rounded-xl bg-accent-500/15 border border-accent-500/30 flex items-center justify-center shrink-0">
+              {report.overall >= 70 ? <CheckCircle2 size={18} className="text-success" /> : <Wand2 size={18} className="text-accent-300" />}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-ink">
+                {report.overall >= 70
+                  ? "This version is checked and ready to submit."
+                  : "Score is below 70. A few targeted rewrites would lift it."}
+              </h3>
+              <p className="text-xs text-ink-muted mt-1 max-w-2xl">
+                {report.overall >= 70
+                  ? `Download the ATS-optimized PDF/DOCX using the exact content that was just checked.`
+                  : `Switch back to the Tailor tab to rewrite specific bullets, or jump to the issues above and fix them in the Build tab.`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {report.overall < 70 && (
+              <Button variant="secondary" size="md" onClick={() => {
+                // Switch to the base resume + navigate user to Tailor with the same JD pre-filled
+                setActiveVersion(BASE_VERSION);
+                // Use sessionStorage so the Tailor tab can read the JD
+                if (jdActive && jdDraft) sessionStorage.setItem("careerai.tailor.jd", jdDraft);
+                // Trigger tab change via a custom event
+                window.dispatchEvent(new CustomEvent("careerai:navigate", { detail: { tab: "tailor" } }));
+              }}>
+                <ArrowLeft size={14} /> Go back to Tailor
+              </Button>
+            )}
+            <Button variant="primary" size="md" disabled>
+              <Download size={14} /> Download ATS-optimized (PDF / DOCX)
+            </Button>
+          </div>
+        </div>
+        <p className="mt-3 text-2xs text-ink-subtle">
+          <Info size={10} className="inline mr-1 -mt-0.5" />
+          PDF / DOCX export ships in the next patch. The download will use the exact resume content that was just checked.
+        </p>
+      </Card>
     </div>
   );
 };

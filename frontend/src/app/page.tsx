@@ -11,6 +11,16 @@ import { ResumeProvider } from "@/lib/resume-store";
 export default function Page() {
   const [tab, setTab] = React.useState<TabKey>("builder");
 
+  // Listen for cross-tab navigation (e.g., "Go back to Tailor" from Check)
+  React.useEffect(() => {
+    const onNav = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { tab?: TabKey };
+      if (detail?.tab) setTab(detail.tab);
+    };
+    window.addEventListener("careerai:navigate", onNav);
+    return () => window.removeEventListener("careerai:navigate", onNav);
+  }, []);
+
   return (
     <ResumeProvider>
       <div className="min-h-screen flex flex-col bg-canvas text-ink">

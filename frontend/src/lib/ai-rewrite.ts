@@ -362,3 +362,147 @@ export async function rewriteResumeWithLlm(
   return { summary, experienceBullets: experienceBullets as LlmRewriteResult[] };
 }
 
+/* -------------------------------------------------------------------------- */
+/*                        Keyword analysis (JD vs Resume)                     */
+/* -------------------------------------------------------------------------- */
+
+/** A reusable set of common job-description stopwords. */
+const JD_STOPWORDS = new Set([
+  "a","an","and","or","the","of","to","in","for","on","with","at","by","from","as","is","are","was","were","be","been","being",
+  "have","has","had","do","does","did","will","would","should","can","could","may","might","must","shall",
+  "i","you","we","they","he","she","it","them","us","our","your","their","my","his","her","its",
+  "this","that","these","those","there","here","then","than","so","if","but","not","no","yes","also","just",
+  "about","into","through","during","before","after","above","below","up","down","out","off","over","under","again","further",
+  "any","all","some","most","more","less","much","many","few","other","such","only","own","same","too","very",
+  "job","role","position","candidate","applicant","person","people","team","company","organization","work","working",
+  "experience","experienced","years","year","months","month","strong","solid","great","good","excellent","plus","bonus",
+  "required","preferred","must","nice","have","having","able","etc","via","using","used","use","including","include",
+  "responsibilities","requirements","qualifications","skills","skill","knowledge","familiarity","understanding",
+  "looking","seeking","want","needs","need","help","helps","helping",
+  "you'll","we're","they're","don't","won't","can't","isn't","aren't","wouldn't","shouldn't","couldn't",
+  "responsibility","responsibility","day","days","week","weeks","time","times","across","within","without","around",
+]);
+
+/** A small but useful set of tech tokens that the JD scanner should prefer to extract. */
+const TECH_TERMS_HINTS = [
+  "python","javascript","typescript","go","golang","rust","java","kotlin","swift","ruby","php","scala","c++","c#","sql","nosql",
+  "react","nextjs","next.js","vue","svelte","angular","nodejs","node.js","express","fastapi","django","flask","rails","spring",
+  "postgres","postgresql","mysql","sqlite","mongodb","redis","kafka","rabbitmq","elasticsearch","dynamodb","cassandra",
+  "aws","azure","gcp","google cloud","kubernetes","k8s","docker","terraform","ansible","helm","jenkins","github actions",
+  "ci/cd","grpc","rest","graphql","openapi","soap","websockets","kafka","pulsar","nats",
+  "tensorflow","pytorch","sklearn","scikit-learn","pandas","numpy","spacy","huggingface","transformers","llm","rag","agents",
+  "mlops","dataflow","airflow","dbt","snowflake","bigquery","redshift","databricks","spark","hadoop",
+  "ios","android","react native","flutter","xamarin","electron","tailwind","css","html","sass","webpack","vite",
+];
+
+export interface KeywordAnalysis {
+  /** Tech + role-specific keywords extracted from the JD. */
+  required: string[];
+  /** Phrases the JD mentions as bonus/nice-to-have. */
+  niceToHave: string[];
+  /** Tech + role terms from the JD that the resume already covers. */
+  matched: string[];
+  /** Tech + role terms from the JD that the resume is missing. */
+  missing: string[];
+  /** Resume keywords that the JD didn't ask for (could stay, could trim). */
+  extra: string[];
+  /** Match score 0-100. weighted: required heavily, niceToHave lightly. */
+  score: number;
+}
+
+const NICE_TO_HAVE_PATTERNS = [
+  /nice to have/i, /bonus/i, /plus is/i, /a plus/i, /would be (great|nice|a plus)/i, /advantageous/i, /preferred/i,
+];
+
+function tokenize(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z0-9][a-z0-9+#./-]{1,30}/g) ?? []);
+}
+
+function isJunkToken(t: string): boolean {
+  if (t.length < 2) return true;
+  if (JD_STOPWORDS.has(t)) return true;
+  if (/^\d+$/.test(t)) return true;
+  if (/^[^a-z]+$/.test(t)) return true;
+  return false;
+}
+
+/** Extract candidate keywords from a JD. */
+export function extractKeywords(jd: string): { required: string[]; niceToHave: string[] } {
+  if (!jd.trim()) return { required: [], niceToHave: [] };
+
+  const lines = jd.split(/\n+/);
+  const isNiceToHaveLine = (line: string) => NICE_TO_HAVE_PATTERNS.some((p) => p.test(line));
+  const required: string[] = [];
+  const niceToHave: string[] = [];
+
+  // First pass: collect all candidate tokens, prefer tech terms
+  const seen = new Set<string>();
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const isNice = isNiceToHaveLine(line);
+    const target = isNice ? niceToHave : required;
+
+    // Look for tech terms (longer phrases win)
+    for (const term of TECH_TERMS_HINTS) {
+      const t = term.toLowerCase();
+      if (line.toLowerCase().includes(t) && !seen.has(t)) {
+        target.push(t);
+        seen.add(t);
+      }
+    }
+
+    // Then look for "X+ years of Y" or "experience with Y" patterns
+    const expMatches = line.matchAll(/(?:experience|knowledge|familiarity|proficiency)\s+(?:with|in|of|using)\s+([a-z0-9][a-z0-9+#./\s-]{2,40})/gi);
+    for (const m of expMatches) {
+      const phrase = m[1].trim().toLowerCase().split(/\s+/).slice(0, 3).join(" ");
+      if (phrase && !seen.has(phrase) && !isJunkToken(phrase)) {
+        target.push(phrase);
+        seen.add(phrase);
+      }
+    }
+  }
+
+  return { required: dedupe(required), niceToHave: dedupe(niceToHave) };
+}
+
+function dedupe(arr: string[]): string[] {
+  return Array.from(new Set(arr.map((s) => s.trim().toLowerCase()).filter(Boolean)));
+}
+
+/** Compare a resume's text against a JD's keyword set. */
+export function compareKeywords(
+  jd: string,
+  resumeText: string,
+): KeywordAnalysis {
+  const { required, niceToHave } = extractKeywords(jd);
+  const resumeLower = resumeText.toLowerCase();
+
+  const matched: string[] = [];
+  const missing: string[] = [];
+  for (const k of required) {
+    if (resumeLower.includes(k)) matched.push(k);
+    else missing.push(k);
+  }
+
+  // For "extra", find tokens in the resume that look like tech terms and aren't in the JD at all
+  const allJd = new Set([...required, ...niceToHave].map((s) => s.toLowerCase()));
+  const extra: string[] = [];
+  for (const term of TECH_TERMS_HINTS) {
+    const t = term.toLowerCase();
+    if (resumeLower.includes(t) && !allJd.has(t) && extra.length < 12) {
+      extra.push(t);
+    }
+  }
+
+  // Score: 70% required, 30% nice-to-have
+  const reqPct = required.length > 0 ? (matched.length / required.length) * 70 : 35;
+  const niceMatched = niceToHave.filter((k) => resumeLower.includes(k)).length;
+  const nicePct = niceToHave.length > 0 ? (niceMatched / niceToHave.length) * 30 : 15;
+  const score = Math.round(Math.min(100, reqPct + nicePct));
+
+  return { required, niceToHave, matched, missing, extra, score };
+}
+
+
