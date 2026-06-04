@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Mail, Phone, MapPin, Globe, Linkedin, Github, GripVertical } from "lucide-react";
-import { Button, cn } from "@/components/ui/base";
-import { useResume } from "@/lib/resume-store";
+import { Plus, Trash2, Mail, Phone, MapPin, Globe, Linkedin, Github, GripVertical, Info } from "lucide-react";
+import { Button, cn, Badge } from "@/components/ui/base";
+import { useResume, BASE_VERSION } from "@/lib/resume-store";
+import { VersionSelector } from "@/components/version-selector";
+import { AiSkillsModule } from "@/components/builder/ai-skills-module";
 
 /* -------------------------------------------------------------------------- */
 /*                              Form primitives                               */
@@ -90,9 +92,12 @@ export const ResumeForm: React.FC = () => {
     addExperience, updateExperience, removeExperience,
     addEducation, updateEducation, removeEducation,
     addProject, updateProject, removeProject,
+    activeVersionId, setActiveVersion,
+    aiSkills, updateAiSkills,
   } = useResume();
 
   const [skillDraft, setSkillDraft] = React.useState("");
+  const isTailored = activeVersionId !== BASE_VERSION;
 
   const addSkill = () => {
     const v = skillDraft.trim();
@@ -103,6 +108,25 @@ export const ResumeForm: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Tailored version hint */}
+      {isTailored && (
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/[0.05] p-3 flex items-center gap-3">
+          <Info size={14} className="text-violet-300 shrink-0" />
+          <p className="text-xs text-ink-muted leading-relaxed flex-1">
+            You're editing a <span className="text-ink font-medium">tailored</span> version. Changes here don't affect your base resume.
+            <button
+              onClick={() => setActiveVersion(BASE_VERSION)}
+              className="ml-2 text-violet-300 hover:text-violet-200 font-medium"
+            >
+              Switch to base →
+            </button>
+          </p>
+        </div>
+      )}
+
+      {/* AI Skills */}
+      <AiSkillsModule state={aiSkills} onChange={updateAiSkills} />
+
       {/* Contact */}
       <Section title="Contact" hint="The basics. ATS will use these to route you.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

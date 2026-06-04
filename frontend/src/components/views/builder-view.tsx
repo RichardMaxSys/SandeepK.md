@@ -6,6 +6,7 @@ import { Search, Download, FileText, Filter, Grid3x3, Eye, Edit3, Sparkles, X } 
 import { Button, Card, Badge, cn } from "@/components/ui/base";
 import { TemplateCard, TEMPLATES } from "@/components/builder/template-card";
 import { ResumeForm } from "@/components/builder/resume-form";
+import { VersionSelector } from "@/components/version-selector";
 import { useResume } from "@/lib/resume-store";
 import { getTemplate, type TemplateDef } from "@/lib/templates";
 import { runAts } from "@/lib/ats-engine";
@@ -53,6 +54,7 @@ export const BuilderView: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <VersionSelector />
           <div className="inline-flex h-9 rounded-lg border border-line bg-canvas-subtle p-0.5">
             <button
               onClick={() => setMode("edit")}
