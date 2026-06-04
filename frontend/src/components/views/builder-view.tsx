@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Download, FileText, Filter, Grid3x3, Eye, Edit3, Sparkles, X } from "lucide-react";
+import { Search, Download, FileText, Filter, Grid3x3, Eye, Edit3, Sparkles, X, CheckCircle2, Lock, Clock } from "lucide-react";
 import { Button, Card, Badge, cn } from "@/components/ui/base";
 import { TemplateCard, TEMPLATES } from "@/components/builder/template-card";
 import { ResumeForm } from "@/components/builder/resume-form";
@@ -10,15 +10,31 @@ import { VersionSelector } from "@/components/version-selector";
 import { useResume } from "@/lib/resume-store";
 import { getTemplate, type TemplateDef } from "@/lib/templates";
 import { runAts } from "@/lib/ats-engine";
+import { usePdfExport } from "@/components/builder/use-pdf-export";
+import { canUse, recordUse, getUsage, isPro as isProUser, timeUntilReset } from "@/lib/usage-limits";
 
 const STORAGE_KEY_TEMPLATE = "careerai.template.v1";
 
 export const BuilderView: React.FC = () => {
-  const { resume } = useResume();
+  const { resume, aiSkills, activeVersionId, versions } = useResume();
   const [templateId, setTemplateId] = React.useState<string>("modern-minimal");
   const [mode, setMode] = React.useState<"edit" | "preview">("edit");
   const [query, setQuery] = React.useState("");
   const [cat, setCat] = React.useState<string>("all");
+  const [pdfToast, setPdfToast] = React.useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [quotaTick, setQuotaTick] = React.useState(0); // forces re-read of usage on action
+
+  const { generate: generatePdf, isGenerating: generatingPdf, error: pdfError } = usePdfExport({
+    onSuccess: (filename) => {
+      setPdfToast({ kind: "success", message: `Downloaded ${filename}` });
+      setQuotaTick((t) => t + 1);
+      setTimeout(() => setPdfToast(null), 3500);
+    },
+    onError: () => {
+      setPdfToast({ kind: "error", message: "PDF generation failed. Try again or use a different template." });
+      setTimeout(() => setPdfToast(null), 4000);
+    },
+  });
 
   React.useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TEMPLATE) : null;
@@ -32,6 +48,40 @@ export const BuilderView: React.FC = () => {
   const report = React.useMemo(() => runAts(resume), [resume]);
   const template = getTemplate(templateId) ?? TEMPLATES[0];
 
+  // PDF export quota
+  const pdfQuota = React.useMemo(() => getUsage("pdfExport"), [quotaTick]);
+  const isPro = React.useMemo(() => isProUser(), [quotaTick]);
+  const pdfCanExport = isPro || pdfQuota.remaining > 0;
+
+  const handleDownloadPdf = async () => {
+    if (!pdfCanExport || generatingPdf) return;
+    // Record the use *before* generating so the quota counter is honest even
+    // if the user closes the tab mid-render. (The PDF blob is still served
+    // by the browser regardless of what we record here.)
+    const result = recordUse("pdfExport");
+    if (!result.ok) {
+      setPdfToast({ kind: "error", message: `You've used all ${pdfQuota.quota} free PDF exports. Resets ${timeUntilReset("pdfExport")}.` });
+      setTimeout(() => setPdfToast(null), 4000);
+      return;
+    }
+    setQuotaTick((t) => t + 1);
+    try {
+      const activeVersion = versions[activeVersionId];
+      await generatePdf({
+        resume,
+        template,
+        watermark: !isPro,
+        aiSkills: {
+          level: aiSkills.level,
+          bullets: aiSkills.bullets,
+          includeInResume: aiSkills.includeInResume,
+        },
+      });
+    } catch {
+      // toast already shown by onError
+    }
+  };
+
   const filtered = React.useMemo(() => {
     return TEMPLATES.filter((t) => {
       if (cat !== "all" && t.category !== cat) return false;
@@ -44,6 +94,32 @@ export const BuilderView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* PDF export toast */}
+      <AnimatePresence>
+        {pdfToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className={cn(
+              "rounded-xl border p-3 flex items-center gap-2 text-sm",
+              pdfToast.kind === "success"
+                ? "border-success/30 bg-success/[0.06] text-success/90"
+                : "border-danger/30 bg-danger/[0.06] text-danger/90",
+            )}
+          >
+            {pdfToast.kind === "success" ? <CheckCircle2 size={14} /> : <X size={14} />}
+            <span className="flex-1">{pdfToast.message}</span>
+            {!isPro && pdfToast.kind === "success" && (
+              <span className="text-2xs text-ink-muted">
+                {pdfQuota.remaining} of {pdfQuota.quota} free exports left
+              </span>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top action bar */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
         <div>
@@ -75,11 +151,30 @@ export const BuilderView: React.FC = () => {
               <Eye size={12} /> Preview
             </button>
           </div>
-          <Button variant="secondary" size="md">
+          <Button
+            variant="secondary"
+            size="md"
+            disabled
+            title="DOCX export ships in the next patch"
+          >
             <FileText size={14} /> DOCX
           </Button>
-          <Button variant="primary" size="md">
-            <Download size={14} /> PDF
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleDownloadPdf}
+            loading={generatingPdf}
+            disabled={!pdfCanExport}
+            title={
+              pdfCanExport
+                ? isPro
+                  ? "Download this resume as a PDF"
+                  : `Download PDF${pdfQuota.remaining < pdfQuota.quota ? ` (${pdfQuota.remaining} of ${pdfQuota.quota} free exports left)` : ""}`
+                : `Free limit reached. Resets in ${timeUntilReset("pdfExport")}.`
+            }
+          >
+            {pdfCanExport ? <Download size={14} /> : <Lock size={14} />}
+            {generatingPdf ? "Generating…" : "PDF"}
           </Button>
         </div>
       </div>
