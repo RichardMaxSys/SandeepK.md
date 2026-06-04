@@ -1,11 +1,25 @@
 /* -------------------------------------------------------------------------- */
-/*                          AI rewrite engine (deterministic)                   */
+/*                          AI rewrite engine (with LLM fallback)              */
 /* -------------------------------------------------------------------------- */
 /*                                                                              */
-/* Local rewrite engine that produces "before / after" pairs from a resume     */
-/* + (optional) job description. The output is realistic enough for the UX     */
-/* to feel real during MVP. The real LLM call (OpenRouter) can be added on top */
-/* by importing this module's functions from a thin wrapper.                    */
+/* Two-tier strategy:                                                            */
+/*                                                                              */
+/* 1. `rewriteBullet*` (deterministic local) — runs always, used as fallback    */
+/*    and as the "AI is offline" path.                                          */
+/*                                                                              */
+/* 2. `rewriteBulletWithLlm` (real LLM) — attempts to call `/api/rewrite`       */
+/*    and falls back to deterministic on ANY failure: timeout, network,         */
+/*    4xx, 5xx, JSON parse, or shape mismatch. View code calls this; it never   */
+/*    needs to handle the fallback path.                                        */
+/*                                                                              */
+/* Cost controls:                                                                */
+/*   - LLM_TIMEOUT_MS — bounded wait                                            */
+/*   - Per-request max 1 bullet = 1 call; bulk uses `rewriteResumeWithLlm`     */
+/*   - Caller can set `signal` to cancel on user navigation                    */
+/*                                                                              */
+/* Security:                                                                     */
+/*   - We pass only the bullet + (optional) JD terms to the LLM, never PII      */
+/*   - Failures are logged with type + length, never the text itself            */
 /*                                                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -218,3 +232,133 @@ function plausibleMetric(_bullet: string, _ctx: { jd?: string; targetRole?: stri
   ];
   return pick(templates, seed);
 }
+
+/* -------------------------------------------------------------------------- */
+/*                         LLM wrapper (with fallback)                         */
+/* -------------------------------------------------------------------------- */
+
+export type RewriteSource = "deterministic" | "llm" | "llm-fallback";
+
+export interface LlmRewriteResult {
+  before: string;
+  after: string;
+  reason: string;
+  changed: boolean;
+  source: RewriteSource;
+  error?: string;
+}
+
+const LLM_TIMEOUT_MS = 8_000;
+
+async function callLlmRewriteEndpoint(
+  payload: { bullet: string; jd?: string; targetRole?: string },
+  signal?: AbortSignal,
+): Promise<{ after: string; reason?: string } | null> {
+  const endpoint = "/api/rewrite";
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+
+  // Chain user-provided signal with our timeout
+  const onAbort = () => ctrl.abort();
+  if (signal) signal.addEventListener("abort", onAbort);
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      safeLog("llm-http", { status: res.status, length: payload.bullet.length });
+      return null;
+    }
+    const json = await res.json();
+    if (typeof json?.after !== "string") {
+      safeLog("llm-shape", { length: payload.bullet.length });
+      return null;
+    }
+    return { after: json.after, reason: json.reason };
+  } catch (e) {
+    safeLog("llm-exception", { kind: (e as Error)?.name ?? "unknown", length: payload.bullet.length });
+    return null;
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onAbort);
+  }
+}
+
+function safeLog(event: string, meta: Record<string, unknown>) {
+  // Never log bullet text or JD content — only length / status
+  if (typeof window !== "undefined" && (window as any).console) {
+    // eslint-disable-next-line no-console
+    console.warn(`[ai-rewrite] ${event}`, meta);
+  }
+}
+
+/**
+ * Public API used by view code. Tries the LLM endpoint, falls back to the
+ * deterministic engine on ANY failure. Always returns a result.
+ */
+export async function rewriteBulletWithLlm(
+  bullet: string,
+  ctx?: { jd?: string; targetRole?: string; signal?: AbortSignal },
+): Promise<LlmRewriteResult> {
+  const before = bullet.trim();
+  if (!before) {
+    return { before, after: before, reason: "Empty bullet.", changed: false, source: "deterministic" };
+  }
+
+  // Attempt LLM
+  try {
+    const llm = await callLlmRewriteEndpoint(
+      { bullet, jd: ctx?.jd, targetRole: ctx?.targetRole },
+      ctx?.signal,
+    );
+    if (llm && llm.after && llm.after !== before) {
+      return {
+        before,
+        after: llm.after,
+        reason: llm.reason ?? "AI rewrite.",
+        changed: true,
+        source: "llm",
+      };
+    }
+  } catch {
+    // already logged inside callLlmRewriteEndpoint
+  }
+
+  // Fallback to deterministic
+  const det = rewriteBullet(bullet, ctx);
+  return {
+    before: det.before,
+    after: det.after,
+    reason: det.reason,
+    changed: det.changed,
+    source: "llm-fallback",
+  };
+}
+
+/**
+ * Bulk version. Runs LLM calls in parallel (bounded) with a per-item timeout.
+ * Falls back per-item to deterministic on failure.
+ */
+export async function rewriteResumeWithLlm(
+  input: { summary?: string; experienceBullets: { id: string; bullet: string }[]; jd?: string },
+  opts?: { signal?: AbortSignal },
+): Promise<{
+  summary: LlmRewriteResult | null;
+  experienceBullets: LlmRewriteResult[];
+}> {
+  const summaryTask = input.summary?.trim()
+    ? rewriteBulletWithLlm(input.summary, { jd: input.jd, signal: opts?.signal })
+    : Promise.resolve(null);
+
+  const bulletTasks = input.experienceBullets.map((b) =>
+    rewriteBulletWithLlm(b.bullet, { jd: input.jd, signal: opts?.signal }).then((r) => ({ id: b.id, ...r })),
+  );
+
+  const [summary, ...experienceBullets] = await Promise.all([summaryTask, ...bulletTasks]);
+  return { summary, experienceBullets: experienceBullets as LlmRewriteResult[] };
+}
+

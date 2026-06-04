@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Sparkles, CheckCircle2, AlertTriangle, X, Plus, Copy, Download,
   Briefcase, Building2, Check, RefreshCw, Wand2, ArrowRight, FileSignature, Sparkle,
+  Linkedin, Bell,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
 import { useResume } from "@/lib/resume-store";
@@ -330,6 +331,32 @@ export const TailorView: React.FC = () => {
         )}
       </Card>
 
+      {/* Phase 2: LinkedIn Optimizer teaser */}
+      <Card className="p-6 relative overflow-hidden bg-gradient-to-br from-canvas-raised via-canvas-raised to-sky-500/[0.04] border-sky-500/15">
+        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0">
+            <Linkedin size={22} className="text-sky-300" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge tone="info">Phase 2</Badge>
+              <p className="text-2xs font-medium uppercase tracking-wider text-ink-subtle">Coming soon</p>
+            </div>
+            <h3 className="text-base font-semibold text-ink">LinkedIn Optimizer</h3>
+            <p className="text-sm text-ink-muted mt-1 max-w-2xl">
+              Paste your LinkedIn About + experience, and we'll score your profile visibility,
+              align it with your resume, and rewrite your headline and About for recruiter search.
+              Same anti-generic, metric-focused logic as the Tailor tab.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="secondary" size="md">
+              <Bell size={14} /> Notify me
+            </Button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 };
