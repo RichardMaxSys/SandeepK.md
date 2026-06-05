@@ -1,5 +1,4 @@
 from docx import Document
-from weasyprint import HTML
 import io
 
 from docx.shared import Pt, RGBColor
@@ -35,6 +34,7 @@ def generate_docx(content_text: str) -> io.BytesIO:
     return file_stream
 
 def generate_pdf(content_text: str) -> io.BytesIO:
+    from weasyprint import HTML  # lazy import — needs GTK system libs on Windows
     # Premium Recruiter-Grade HTML Template
     sections = content_text.split('\n')
     styled_content = ""

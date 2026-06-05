@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, UploadFile, File, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from .database import engine, Base, get_db
+from .database import Base, get_db, ensure_tables
 from .models import Resume, Job, ApplicationPackage
 from .services.ai_service import parse_resume, analyze_ats, tailor_resume
 from .services.job_search_service import search_jobs, compute_match_score
@@ -13,10 +13,13 @@ from fastapi.responses import StreamingResponse
 import io
 import datetime
 from pdfminer.high_level import extract_text as extract_pdf_text
+from .routers.ai import router as ai_router
 
-Base.metadata.create_all(bind=engine)
+ensure_tables()
 
 app = FastAPI(title="Personal Job Application Assistant")
+
+app.include_router(ai_router)
 
 app.add_middleware(
     CORSMiddleware,

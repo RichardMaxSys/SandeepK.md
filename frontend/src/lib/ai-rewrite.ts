@@ -250,11 +250,17 @@ export interface LlmRewriteResult {
 
 const LLM_TIMEOUT_MS = 8_000;
 
+// Backend URL — defaults to localhost:8000 for dev, override via window.__BACKEND_URL
+const BACKEND_URL =
+  typeof window !== "undefined" && (window as any).__BACKEND_URL
+    ? (window as any).__BACKEND_URL
+    : "http://localhost:8000";
+
 async function callLlmRewriteEndpoint(
   payload: { bullet: string; jd?: string; targetRole?: string },
   signal?: AbortSignal,
 ): Promise<{ after: string; reason?: string } | null> {
-  const endpoint = "/api/rewrite";
+  const endpoint = `${BACKEND_URL}/api/rewrite`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
 
