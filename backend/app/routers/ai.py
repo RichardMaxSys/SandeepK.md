@@ -93,11 +93,20 @@ Top Resume Bullets:
     return CoverLetterResponse(letter=letter.strip())
 
 
+import os
+
 @router.get("/health")
 async def health():
     try:
         from ..services.llm_provider import _get_api_key
-        _get_api_key()
-        return {"status": "ok", "model": "openai/gpt-4o-mini"}
-    except ValueError:
-        return {"status": "error", "message": "OPENROUTER_API_KEY not set"}
+        k = _get_api_key()
+        env_k = os.environ.get("OPENROUTER_API_KEY", "")
+        return {
+            "status": "ok",
+            "model": "openai/gpt-4o-mini",
+            "key_prefix": k[:15] if k else "NONE",
+            "key_len": len(k) if k else 0,
+            "env_key_prefix": env_k[:15] if env_k else "NOT_IN_ENV",
+        }
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}
