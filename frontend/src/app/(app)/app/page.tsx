@@ -8,7 +8,7 @@ import { CheckView } from "@/components/views/check-view";
 import { TailorView } from "@/components/views/tailor-view";
 import { ResumeProvider } from "@/lib/resume-store";
 
-export default function Page() {
+export default function AppPage() {
   const [tab, setTab] = React.useState<TabKey>("builder");
 
   // Listen for cross-tab navigation (e.g., "Go back to Tailor" from Check)

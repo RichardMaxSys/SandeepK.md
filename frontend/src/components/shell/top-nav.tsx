@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Sparkles, Search, Bell, Download, ChevronDown, type LucideIcon } from "lucide-react";
 import { Avatar, Badge, Button, cn } from "@/components/ui/base";
@@ -61,13 +62,15 @@ export const TopNav: React.FC<TopNavProps> = ({ active, onChange, onExport }) =>
       {/* Row 1: brand + actions */}
       <div className="h-16 px-6 flex items-center gap-4">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-accent-400 to-sky-500 flex items-center justify-center shadow-glow-accent">
-            <Sparkles size={18} className="text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-ink tracking-tight">CareerAI</p>
-            <p className="text-2xs text-ink-subtle uppercase tracking-wider">Resume Intelligence</p>
-          </div>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-accent-400 to-sky-500 flex items-center justify-center shadow-glow-accent group-hover:opacity-90 transition-opacity">
+              <Sparkles size={18} className="text-white" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-ink tracking-tight">CareerAI</p>
+              <p className="text-2xs text-ink-subtle uppercase tracking-wider">Resume Intelligence</p>
+            </div>
+          </Link>
         </div>
 
         <div className="hidden md:block flex-1 max-w-md mx-4">

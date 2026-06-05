@@ -71,7 +71,7 @@ export function useDocxExport(options: UseDocxExportOptions = {}): UseDocxExport
         ]);
 
         const { Packer } = docxModule;
-        const { saveAs } = fsModule;
+        const saveAs = fsModule.saveAs || fsModule.default?.saveAs;
         const { buildDocx, getSafeDocxFilename } = docModule;
 
         const document = await buildDocx(opts);
