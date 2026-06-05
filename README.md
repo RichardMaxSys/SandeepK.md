@@ -1,61 +1,94 @@
-# AI Career Intelligence Platform
+# CareerAI — Resume Intelligence
 
-A sophisticated, high-trust AI assistant that finds suitable jobs, analyzes them for ATS compatibility, and generates recruiter-grade tailored application packages.
+AI-powered resume builder with transparent ATS scoring and job-specific tailoring.
 
-## 🚀 Overview
+## What it does
 
-This platform is designed to move beyond simple automation. It acts as an intelligent career preparation partner that:
-- **Analyzes Job Quality:** Detects scams, "ghost jobs", and unrealistic expectations.
-- **Simulates ATS Parsing:** Flags formatting risks and keyword gaps before you apply.
-- **Generates Recruiter-Grade Resumes:** Enforces FAANG-level standards and quantified impact (X-Y-Z formula).
-- **Keeps You in Control:** A robust manual review workflow ensures every application is human-approved.
+| Tab | Purpose |
+|-----|---------|
+| **Builder** | Pick from 18 templates. Edit your resume live. Export PDF or DOCX. |
+| **ATS Check** | Transparent 4-dimension scoring — parseability, keywords, formatting, content. |
+| **Tailor** | Paste a job description. AI rewrites your bullets. Side-by-side diff. |
 
-## 🛠 Tech Stack
+## Tech stack
 
-- **Frontend:** Next.js 15, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, Recharts.
-- **Backend:** FastAPI (Python 3.12), SQLAlchemy (PostgreSQL).
-- **Task Queue:** Celery, Redis.
-- **AI Integration:** OpenRouter (Gemini 2.0 Flash, Claude 3.5 Sonnet).
-- **Automation:** Playwright (Dry-run mode).
-- **Document Engine:** WeasyPrint (PDF), python-docx (DOCX).
-- **Deployment:** Docker & Docker Compose.
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 3.4 |
+| Animations | Framer Motion 11 |
+| Icons | Lucide React |
+| PDF export | @react-pdf/renderer (lazy-loaded) |
+| DOCX export | docx + file-saver (lazy-loaded) |
+| Testing | Vitest — 85 tests |
+| State | React Context + localStorage |
 
-## 🔑 Setup & Installation
+## Quick start
 
-### 1. Prerequisites
-- Docker & Docker Compose installed.
-- API Keys for OpenRouter (and optionally Adzuna for real job searches).
+cd frontend
+npm install
+npm run dev        # http://localhost:3000 (marketing) / http://localhost:3000/app (builder)
+npm test           # 85/85 tests
+npm run build      # ~185 kB first load
 
-### 2. Environment Configuration
-Copy `.env.example` to `.env` and fill in your keys:
-```bash
-cp .env.example .env
-```
+## Architecture
 
-### 3. Startup
-Run the entire stack using Docker Compose:
-```bash
-docker compose up --build
-```
-The system will be available at:
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs
+frontend/src/
+├── app/
+│   ├── (marketing)/page.tsx     Landing page at /
+│   └── (app)/app/page.tsx       3-tab resume builder at /app
+├── components/
+│   ├── shell/top-nav.tsx        Top navigation
+│   ├── builder/                 Template gallery, resume editor, PDF/DOCX export
+│   ├── views/                   builder-view, check-view, tailor-view
+│   └── ui/                      Button, Card, Badge, charts, usage-gate
+├── lib/
+│   ├── ats-engine.ts            4-dimension ATS scoring + humanizer
+│   ├── ai-rewrite.ts            Deterministic rewrite + LLM wrapper
+│   ├── resume-store.tsx         Multi-version resume state
+│   ├── templates.ts             18 template definitions
+│   └── usage-limits.ts          Free-tier rate limiting
 
-## 🧪 Testing Workflow
+## Design system
 
-1. **Upload Resume:** Go to the dashboard and upload your master resume (.pdf or .txt).
-2. **Search Jobs:** Search for roles (e.g., "Senior Python Developer").
-3. **Tailor Application:** Click "Tailor Resume" on a job card. This runs in the background.
-4. **Deep Review:** Open the generated package. Switch between "Intelligence Analysis" and "Resume Preview".
-5. **Approve:** Click "Approve & Mark Ready" after reviewing the recruiter feedback and ATS score.
-6. **Dry Run:** Click "Dry Run Apply" to open the job page and pre-fill fields using Playwright (stops before submission).
+Dark theme with teal accent. Fonts: Inter (body), JetBrains Mono (code).
 
-## 🛡 Safety & Privacy
-- **No Auto-Submit:** The system strictly avoids automatic submission. All applications require manual human review.
-- **Dry-Run Only:** Playwright automation is configured to stop before the final "Submit" button.
-- **Encrypted Storage:** All documents are handled securely within the database volume.
+| Token | Value | Use |
+|-------|-------|-----|
+| canvas.DEFAULT | #0a0e1a | Page background |
+| canvas.raised | #161c2e | Cards |
+| ink.DEFAULT | #e6ebf5 | Body text |
+| accent.500 | #14b8a6 | Teal — primary actions |
 
-## 📝 Known Limitations
-- Initial search results use Adzuna API; support for more sources (JSearch, LinkedIn) is modular but pending.
-- Playwright automation relies on common field name heuristics; complex forms may require manual completion.
+## Pricing model
+
+| Tier | Price | What you get |
+|------|-------|-------------|
+| Free | $0 | 1 ATS check/day, 5 templates, watermarked export |
+| Pro | $15/mo | Unlimited checks, all 18 templates, AI rewrite, no watermark |
+| Lifetime | $199 | Everything, forever (capped at 500 customers) |
+
+## Roadmap
+
+| Status | Feature |
+|--------|---------|
+| Done | Resume builder + 18 templates |
+| Done | 4-dimension ATS scoring |
+| Done | Tailor tab (JD analysis + AI rewrite) |
+| Done | PDF + DOCX export |
+| Done | Marketing landing page |
+| Done | Multi-version resume management |
+| Next | Real LLM rewrite (OpenRouter) |
+| Planned | Resume file upload (PDF/DOCX parsing) |
+| Planned | Stripe paywall + authentication |
+
+## Repository
+
+- **Repo:** github.com/RichardMaxSys/SandeepK.md
+- **Active branch:** feat/pivot-mvp
+- **Founder:** Sandeep K — richardmaxsys@gmail.com
+
+## License
+
+Proprietary. All rights reserved.
