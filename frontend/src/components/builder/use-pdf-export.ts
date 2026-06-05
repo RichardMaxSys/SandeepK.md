@@ -63,16 +63,14 @@ export function usePdfExport(options: UsePdfExportOptions = {}): UsePdfExportRet
       setError(null);
       try {
         const renderer = await loadRenderer();
-        const { pdf, ResumeDocument } = renderer as typeof import("@react-pdf/renderer") & { ResumeDocument: React.ComponentType<ResumeDocumentProps> };
-        // The dynamic chunk re-exports the component under a renamed key
-        // (ResumeDocument gets auto-renamed by the bundler when imported from
-        // a different module specifier). Fall back to the default import if
-        // needed.
-        const DocumentComp = (ResumeDocument as any) ?? (renderer as any).default;
-        if (!DocumentComp) {
+        // CJS/ESM interop: named exports may be on .default
+        const m = (renderer as any).default || renderer;
+        const pdf = m.pdf;
+        const ResumeDocument = m.ResumeDocument;
+        if (!ResumeDocument) {
           throw new Error("PDF document component failed to load. Refresh the page and try again.");
         }
-        const doc = React.createElement(DocumentComp, {
+        const doc = React.createElement(ResumeDocument, {
           resume: opts.resume,
           template: opts.template,
           watermark: opts.watermark,
