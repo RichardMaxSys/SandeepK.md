@@ -46,6 +46,13 @@ export const TailorView: React.FC = () => {
     versions, activeVersionId, setActiveVersion,
     resume, updateSummary, updateExperience, createTailoredVersion, resume: r,
   } = useResume();
+  if (!resume || !resume.contact || (!resume.contact.name && resume.experience.length === 0)) {
+    return <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <p className="text-ink-muted text-lg">No resume found.</p>
+      <button onClick={() => window.dispatchEvent(new CustomEvent('careerai:navigate', { detail: { tab: 'builder' } }))}
+        className="text-accent-500 underline">Build one first →</button>
+    </div>
+  }
   const [sourceVersionId, setSourceVersionId] = React.useState<string>(BASE_VERSION);
   const [jd, setJd] = React.useState<string>("");
   const [company, setCompany] = React.useState<string>("");

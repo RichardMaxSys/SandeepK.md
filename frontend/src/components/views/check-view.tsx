@@ -14,6 +14,13 @@ import { VersionSelector } from "@/components/version-selector";
 
 export const CheckView: React.FC = () => {
   const { resume, versions, activeVersionId, setActiveVersion, versionList } = useResume();
+  if (!resume || !resume.contact || (!resume.contact.name && resume.experience.length === 0)) {
+    return <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <p className="text-ink-muted text-lg">No resume found.</p>
+      <button onClick={() => window.dispatchEvent(new CustomEvent('careerai:navigate', { detail: { tab: 'builder' } }))}
+        className="text-accent-500 underline">Build one first →</button>
+    </div>
+  }
   const [report, setReport] = React.useState<AtsReport>(() => runAts(resume));
   const [baseReport, setBaseReport] = React.useState<AtsReport | null>(null);
   const [jdDraft, setJdDraft] = React.useState<string>("");

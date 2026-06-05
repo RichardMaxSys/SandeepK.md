@@ -11,7 +11,8 @@ import { useResume } from "@/lib/resume-store";
 import { getTemplate, type TemplateDef } from "@/lib/templates";
 import { runAts } from "@/lib/ats-engine";
 import { usePdfExport } from "@/components/builder/use-pdf-export";
-import { canUse, recordUse, getUsage, isPro as isProUser, timeUntilReset } from "@/lib/usage-limits";
+import { useDocxExport } from "@/components/builder/use-docx-export";
+import { canUse, recordUse, getUsage, isPro as isProUser, timeUntilReset, LIMITS } from "@/lib/usage-limits";
 
 const STORAGE_KEY_TEMPLATE = "careerai.template.v1";
 
@@ -23,6 +24,8 @@ export const BuilderView: React.FC = () => {
   const [cat, setCat] = React.useState<string>("all");
   const [pdfToast, setPdfToast] = React.useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [quotaTick, setQuotaTick] = React.useState(0); // forces re-read of usage on action
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   const { generate: generatePdf, isGenerating: generatingPdf, error: pdfError } = usePdfExport({
     onSuccess: (filename) => {
@@ -36,6 +39,26 @@ export const BuilderView: React.FC = () => {
     },
   });
 
+  const { generate: generateDocx, isGenerating: generatingDocx } = useDocxExport({
+    onSuccess: (filename) => {
+      setPdfToast({ kind: "success", message: `Downloaded ${filename}` });
+      setTimeout(() => setPdfToast(null), 3500);
+    },
+    onError: () => {
+      setPdfToast({ kind: "error", message: "DOCX generation failed." });
+      setTimeout(() => setPdfToast(null), 4000);
+    },
+  });
+
+  const handleDownloadDocx = async () => {
+    if (generatingDocx) return;
+    try {
+      await generateDocx({ resume, template, watermark: !isPro });
+    } catch {
+      // toast already shown by onError
+    }
+  };
+
   React.useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TEMPLATE) : null;
     if (saved) setTemplateId(saved);
@@ -48,10 +71,14 @@ export const BuilderView: React.FC = () => {
   const report = React.useMemo(() => runAts(resume), [resume]);
   const template = getTemplate(templateId) ?? TEMPLATES[0];
 
-  // PDF export quota
-  const pdfQuota = React.useMemo(() => getUsage("pdfExport"), [quotaTick]);
-  const isPro = React.useMemo(() => isProUser(), [quotaTick]);
-  const pdfCanExport = isPro || pdfQuota.remaining > 0;
+  // PDF export quota — wrapped in mounted check to prevent hydration mismatch
+  // (localStorage isn't available on the server, so we default to "allowed")
+  const pdfQuota = React.useMemo(
+    () => mounted ? getUsage("pdfExport") : { remaining: LIMITS.pdfExport.quota, quota: LIMITS.pdfExport.quota, used: 0, resetsAt: 0 },
+    [mounted, quotaTick],
+  );
+  const isPro = React.useMemo(() => mounted && isProUser(), [mounted, quotaTick]);
+  const pdfCanExport = !mounted || isPro || pdfQuota.remaining > 0;
 
   const handleDownloadPdf = async () => {
     if (!pdfCanExport || generatingPdf) return;
@@ -154,10 +181,10 @@ export const BuilderView: React.FC = () => {
           <Button
             variant="secondary"
             size="md"
-            disabled
-            title="DOCX export ships in the next patch"
+            onClick={handleDownloadDocx}
+            loading={generatingDocx}
           >
-            <FileText size={14} /> DOCX
+            <FileText size={14} /> {generatingDocx ? "Generating…" : "DOCX"}
           </Button>
           <Button
             variant="primary"

@@ -21,9 +21,16 @@ export interface UsageGateProps {
 export const UsageGate: React.FC<UsageGateProps> = ({ feature, onAllowed, children, bypass }) => {
   const [tick, setTick] = React.useState(0);
   const [showUpgrade, setShowUpgrade] = React.useState(false);
-  const usage = getUsage(feature);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // Don't read localStorage during render (hydration mismatch guard).
+  // On the server / before mount: default to "allowed" so server and client match.
+  const usage = React.useMemo(
+    () => mounted ? getUsage(feature) : { used: 0, remaining: LIMITS[feature].quota, quota: LIMITS[feature].quota },
+    [mounted, feature, tick],
+  );
   const limit = LIMITS[feature];
-  const allowed = bypass || isPro() || usage.remaining > 0;
+  const allowed = bypass || !mounted || isPro() || usage.remaining > 0;
 
   const handleClick = (e: React.MouseEvent) => {
     if (bypass || isPro()) { onAllowed(); return; }
@@ -95,12 +102,17 @@ const UpgradePrompt: React.FC<{ feature: FeatureKey; onClose: () => void }> = ({
 
 export const UsageChip: React.FC<{ feature: FeatureKey }> = ({ feature }) => {
   const [, setTick] = React.useState(0);
-  const usage = getUsage(feature);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  const usage = React.useMemo(
+    () => mounted ? getUsage(feature) : { used: 0, remaining: LIMITS[feature].quota, quota: LIMITS[feature].quota },
+    [mounted, feature],
+  );
   const limit = LIMITS[feature];
-  if (isPro()) return <Badge tone="accent" className="font-mono">Pro</Badge>;
+  if (mounted && isPro()) return <Badge tone="accent" className="font-mono">Pro</Badge>;
   return (
     <Badge
-      tone={usage.remaining > 0 ? "neutral" : "warning"}
+      tone={!mounted || usage.remaining > 0 ? "neutral" : "warning"}
       className="font-mono"
       onClick={() => setTick((t) => t + 1)}
     >
@@ -114,6 +126,9 @@ export const UsageChip: React.FC<{ feature: FeatureKey }> = ({ feature }) => {
 /* -------------------------------------------------------------------------- */
 /* Useful for local QA. Drops a "Toggle Pro" pill in the bottom-right.        */
 export const ProToggle: React.FC = () => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
   if (typeof window === "undefined") return null;
   // Don't render in production
   if (process.env.NODE_ENV === "production") return null;
