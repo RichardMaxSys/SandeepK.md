@@ -87,6 +87,10 @@ function filterToPeriod(timestamps: number[], period: FeatureLimit["period"]): n
 /* ----------------------------- Public API ----------------------------- */
 
 export function isPro(): boolean {
+  // Dev override: check for a "careerai.pro" flag in localStorage
+  if (typeof window !== "undefined" && localStorage.getItem("careerai.pro") === "true") {
+    return true;
+  }
   return typeof read().proSince === "number";
 }
 
