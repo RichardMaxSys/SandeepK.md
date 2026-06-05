@@ -11,7 +11,7 @@ import { Card, Button, Badge, cn } from "@/components/ui/base";
 import { useResume, BASE_VERSION } from "@/lib/resume-store";
 import { VersionSelector } from "@/components/version-selector";
 import { runAts } from "@/lib/ats-engine";
-import { rewriteResume, generateCoverLetter, rewriteBullet, extractKeywords, compareKeywords, type KeywordAnalysis } from "@/lib/ai-rewrite";
+import { rewriteResume, rewriteResumeWithLlm, generateCoverLetter, rewriteBullet, extractKeywords, compareKeywords, type KeywordAnalysis, type RewriteSource } from "@/lib/ai-rewrite";
 
 const STORAGE_KEY_JD = "careerai.jd.v1";
 
@@ -41,6 +41,24 @@ Nice to have:
 
 Tech: Python, FastAPI, PostgreSQL, Redis, Docker, Kubernetes, AWS, gRPC, Kafka`;
 
+const BACKEND_URL =
+  typeof window !== "undefined" && (window as any).__BACKEND_URL
+    ? (window as any).__BACKEND_URL
+    : "http://localhost:8000";
+
+function wordDiff(before: string, after: string): React.ReactNode {
+  const bWords = before.split(/(\s+)/);
+  const aWords = after.split(/(\s+)/);
+  const bSet = new Set(bWords.map(w => w.toLowerCase()));
+  return aWords.map((word, i) => {
+    if (/^\s+$/.test(word)) return word;
+    const changed = !bSet.has(word.toLowerCase());
+    return changed
+      ? <mark key={i} className="bg-yellow-100 dark:bg-yellow-900 rounded px-0.5">{word}</mark>
+      : <span key={i}>{word}</span>;
+  });
+}
+
 export const TailorView: React.FC = () => {
   const {
     versions, activeVersionId, setActiveVersion,
@@ -60,13 +78,15 @@ export const TailorView: React.FC = () => {
   const [hydrated, setHydrated] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<KeywordAnalysis | null>(null);
   const [analyzing, setAnalyzing] = React.useState(false);
-  const [rewrites, setRewrites] = React.useState<Record<string, { before: string; after: string; reason: string; changed: boolean }>>({});
-  const [summaryRewrite, setSummaryRewrite] = React.useState<{ before: string; after: string; changed: boolean; reason: string } | null>(null);
+  const [rewrites, setRewrites] = React.useState<Record<string, { before: string; after: string; reason: string; changed: boolean; source?: RewriteSource }>>({});
+  const [summaryRewrite, setSummaryRewrite] = React.useState<{ before: string; after: string; changed: boolean; reason: string; source?: RewriteSource } | null>(null);
   const [generating, setGenerating] = React.useState(false);
   const [coverLetter, setCoverLetter] = React.useState<string | null>(null);
   const [generatingLetter, setGeneratingLetter] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const [savedToast, setSavedToast] = React.useState<string | null>(null);
+  const [atsLoading, setAtsLoading] = React.useState(false);
+  const [atsResult, setAtsResult] = React.useState<any>(null);
 
   // Default the source version to the base on mount (the user is "starting from base")
   React.useEffect(() => {
@@ -115,10 +135,32 @@ export const TailorView: React.FC = () => {
     }, 400);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!jd.trim()) return;
     setGenerating(true);
-    setTimeout(() => {
+    try {
+      const experienceBullets = sourceResume.experience.flatMap((e) =>
+        e.bullets.map((b, i) => ({ id: `${e.id}-${i}`, bullet: b })),
+      );
+      const out = await rewriteResumeWithLlm({
+        summary: sourceResume.summary,
+        experienceBullets,
+        jd,
+      });
+      if (!out) return;
+      const map: typeof rewrites = {};
+      for (const r of out.experienceBullets) {
+        const rid = (r as any).id;
+        if (rid) map[rid] = { before: r.before, after: r.after, reason: r.reason, changed: r.changed, source: r.source };
+      }
+      setRewrites(map);
+      if (out.summary) {
+        setSummaryRewrite({ before: out.summary.before, after: out.summary.after, changed: out.summary.changed, reason: out.summary.reason, source: out.summary.source });
+      }
+    } catch (err) {
+      console.warn("[tailor] LLM rewrite failed, falling back to deterministic", err);
+      // rewriteResumeWithLlm already has a per-item fallback, so this catch
+      // handles the case where even the wrapper threw (e.g. module error)
       const out = rewriteResume({
         summary: sourceResume.summary,
         experienceBullets: sourceResume.experience.flatMap((e) =>
@@ -127,11 +169,12 @@ export const TailorView: React.FC = () => {
         jd,
       });
       const map: typeof rewrites = {};
-      for (const r of out.experienceBullets) map[r.id] = r;
+      for (const r of out.experienceBullets) map[r.id] = { ...r, source: "deterministic" as RewriteSource };
       setRewrites(map);
-      setSummaryRewrite(out.summary);
+      if (out.summary) setSummaryRewrite({ ...out.summary, source: "deterministic" as RewriteSource });
+    } finally {
       setGenerating(false);
-    }, 500);
+    }
   };
 
   const handleSaveTailoredVersion = () => {
@@ -212,6 +255,43 @@ export const TailorView: React.FC = () => {
     await navigator.clipboard.writeText(coverLetter);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const fullResumeText = React.useMemo(() => {
+    const parts = [
+      resume.summary,
+      ...resume.experience.flatMap((e) => [
+        `${e.role} at ${e.company} (${e.start} – ${e.end})`,
+        ...e.bullets,
+      ]),
+      ...resume.education.map((e) => `${e.degree} ${e.field}, ${e.school} (${e.start} – ${e.end})`),
+      "Skills: " + resume.skills.join(", "),
+    ].filter(Boolean);
+    return parts.join("\n\n");
+  }, [resume]);
+
+  const handleAtsCheck = async () => {
+    if (!jd.trim() || !resume) return;
+    setAtsLoading(true);
+    setAtsResult(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/ats/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job_description: jd,
+          resume_text: fullResumeText,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAtsResult(data);
+    } catch (err) {
+      console.warn("[tailor] ATS check failed", err);
+      setAtsResult({ error: "ATS check unavailable. Try again later." });
+    } finally {
+      setAtsLoading(false);
+    }
   };
 
   const fillSample = () => {
@@ -481,6 +561,7 @@ export const TailorView: React.FC = () => {
                 after={summaryRewrite.after}
                 reason={summaryRewrite.reason}
                 onAccept={acceptSummary}
+                source={summaryRewrite.source}
               />
             )}
 
@@ -498,12 +579,130 @@ export const TailorView: React.FC = () => {
                   after={rw.after}
                   reason={rw.reason}
                   onAccept={() => acceptOne(id)}
+                  source={rw.source}
                 />
               );
             })}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ATS Check */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                <ListChecks size={13} className="text-emerald-300" />
+              </div>
+              <h2 className="text-base font-semibold text-ink">ATS Check</h2>
+            </div>
+            <p className="text-2xs text-ink-muted mt-1">
+              Score your tailored resume against the job description.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleAtsCheck}
+            disabled={!jd.trim() || atsLoading}
+            loading={atsLoading}
+          >
+            <ListChecks size={14} />
+            {atsLoading ? "Analyzing…" : atsResult ? "Re-run ATS check" : "Run ATS check"}
+          </Button>
+        </div>
+
+        {atsResult && !atsResult.error && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* Score + Overall Fit */}
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold",
+                atsResult.score >= 70 ? "bg-success/15 text-success" :
+                atsResult.score >= 40 ? "bg-amber-500/15 text-amber-300" :
+                "bg-danger/15 text-danger",
+              )}>
+                {atsResult.score ?? "—"}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">ATS Match Score</p>
+                <Badge tone={
+                  atsResult.overall_fit === "strong" ? "success" :
+                  atsResult.overall_fit === "moderate" ? "warning" : "danger"
+                } className="mt-1 capitalize">
+                  {atsResult.overall_fit ?? "unknown"} fit
+                </Badge>
+              </div>
+            </div>
+
+            {/* Keywords */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-success/20 bg-success/[0.04] p-4">
+                <p className="text-2xs font-medium uppercase tracking-wider text-success/90 mb-2">Present keywords ({atsResult.present_keywords?.length ?? 0})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(atsResult.present_keywords ?? []).map((k: string) => (
+                    <span key={k} className="text-2xs font-mono px-1.5 py-0.5 rounded bg-success/10 text-success/90 border border-success/20">{k}</span>
+                  ))}
+                  {(atsResult.present_keywords ?? []).length === 0 && <p className="text-2xs text-ink-subtle">None matched.</p>}
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+                <p className="text-2xs font-medium uppercase tracking-wider text-amber-300/90 mb-2">Missing keywords ({atsResult.missing_keywords?.length ?? 0})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(atsResult.missing_keywords ?? []).map((k: string) => (
+                    <span key={k} className="text-2xs font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300/90 border border-amber-500/20">{k}</span>
+                  ))}
+                  {(atsResult.missing_keywords ?? []).length === 0 && <p className="text-2xs text-ink-subtle">No missing keywords.</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Missing skills */}
+            {(atsResult.missing_skills ?? []).length > 0 && (
+              <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.04] p-4">
+                <p className="text-2xs font-medium uppercase tracking-wider text-orange-300/90 mb-2">Missing skills ({atsResult.missing_skills.length})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {atsResult.missing_skills.map((k: string) => (
+                    <span key={k} className="text-2xs font-mono px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300/90 border border-orange-500/20">{k}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Suggestions */}
+            {(atsResult.suggestions ?? []).length > 0 && (
+              <div className="rounded-xl border border-line bg-canvas-subtle p-4">
+                <p className="text-2xs font-medium uppercase tracking-wider text-ink-muted mb-2">Suggestions</p>
+                <ol className="space-y-1.5 list-decimal list-inside">
+                  {atsResult.suggestions.map((s: string, i: number) => (
+                    <li key={i} className="text-xs text-ink-muted leading-relaxed">{s}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {/* Fallback note */}
+            {atsResult.fallback && (
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2">
+                <AlertTriangle size={12} className="text-amber-300 shrink-0 mt-0.5" />
+                <p className="text-2xs text-amber-300/90">LLM unavailable — ATS results are keyword-match only.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {atsResult?.error && (
+          <div className="rounded-lg border border-danger/20 bg-danger/5 p-3 flex items-start gap-2">
+            <AlertCircle size={12} className="text-danger shrink-0 mt-0.5" />
+            <p className="text-xs text-danger/90">{atsResult.error}</p>
+          </div>
+        )}
+      </Card>
 
       {/* Step 3: Cover Letter */}
       <Card className="p-5">
@@ -594,13 +793,21 @@ const RewriteCard: React.FC<{
   after: string;
   reason: string;
   onAccept: () => void;
-}> = ({ label, before, after, reason, onAccept }) => (
+  source?: RewriteSource;
+}> = ({ label, before, after, reason, onAccept, source }) => (
   <Card className="p-5">
     <div className="flex items-center justify-between mb-3">
       <div>
-        <Badge tone="accent" className="mb-1.5">AI rewrite</Badge>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Badge tone="accent">AI rewrite</Badge>
+          {source === "llm" ? (
+            <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">✨ AI</span>
+          ) : (
+            <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">⚡ Local</span>
+          )}
+        </div>
         <p className="text-sm font-medium text-ink">{label}</p>
-        <p className="text-2xs text-ink-muted mt-0.5">{reason}</p>
+        {reason && <p className="text-xs text-ink-muted mt-1">{reason}</p>}
       </div>
       <Button variant="primary" size="sm" onClick={onAccept}>
         <Check size={14} /> Accept
@@ -613,7 +820,7 @@ const RewriteCard: React.FC<{
       </div>
       <div className="rounded-xl border border-success/20 bg-success/[0.04] p-4">
         <p className="text-2xs font-medium uppercase tracking-wider text-success/80 mb-2">After</p>
-        <p className="text-sm text-ink leading-relaxed">{after}</p>
+        <p className="text-sm text-ink leading-relaxed">{wordDiff(before, after)}</p>
       </div>
     </div>
   </Card>

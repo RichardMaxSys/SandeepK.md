@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from typing import Any
 from pydantic import BaseModel, Field
 from typing import Optional
 from ..services.llm_provider import call_llm, safe_parse_json
@@ -91,6 +92,47 @@ Top Resume Bullets:
     except Exception as e:
         raise HTTPException(503, f"LLM unavailable: {str(e)}")
     return CoverLetterResponse(letter=letter.strip())
+
+
+@router.post("/ats/analyze")
+async def ats_analyze(request: dict[str, Any]):
+    jd = request.get("job_description", "").strip()
+    resume = request.get("resume_text", "").strip()
+    if not jd or not resume:
+        raise HTTPException(status_code=400, detail="Both job_description and resume_text are required")
+    system = """You are an ATS (Applicant Tracking System) analyzer.
+Score the resume against the job description.
+Return ONLY valid JSON in this exact shape — no other text:
+{
+  "score": <integer 0-100>,
+  "overall_fit": "<strong|moderate|weak>",
+  "present_keywords": [<strings found in both resume and JD>],
+  "missing_keywords": [<important JD keywords absent from resume>],
+  "missing_skills": [<technical skills in JD not in resume>],
+  "suggestions": [<up to 5 specific one-sentence improvement suggestions>]
+}"""
+    user = f"RESUME:\n{resume}\n\nJOB DESCRIPTION:\n{jd}"
+    try:
+        raw = await call_llm(system=system, user=user, max_tokens=800, temperature=0.2)
+        result = safe_parse_json(raw)
+        if "score" not in result:
+            raise ValueError("LLM returned malformed JSON")
+        return result
+    except Exception:
+        jd_words = set(w.lower() for w in jd.split() if len(w) > 4)
+        resume_words = set(w.lower() for w in resume.split() if len(w) > 4)
+        present = list(jd_words & resume_words)[:10]
+        missing = list(jd_words - resume_words)[:10]
+        overlap = len(present) / max(len(jd_words), 1)
+        return {
+            "score": round(overlap * 100),
+            "overall_fit": "moderate",
+            "present_keywords": present,
+            "missing_keywords": missing,
+            "missing_skills": [],
+            "suggestions": ["LLM unavailable — keyword match only"],
+            "fallback": True,
+        }
 
 
 import os
