@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Any
 from pydantic import BaseModel, Field
 from typing import Optional
 from ..services.llm_provider import call_llm, safe_parse_json
+from .auth import require_active_subscription
+from ..models.user import User
 
 router = APIRouter(prefix="/api", tags=["ai"])
 
@@ -59,7 +61,7 @@ class CoverLetterResponse(BaseModel):
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
-async def rewrite(req: RewriteRequest):
+async def rewrite(req: RewriteRequest, _user: User = Depends(require_active_subscription)):
     user_prompt = f"""BULLET: {req.bullet}
 
 JD CONTEXT:
@@ -76,7 +78,7 @@ TONE: {req.tone or "impact"}"""
 
 
 @router.post("/cover-letter", response_model=CoverLetterResponse)
-async def cover_letter(req: CoverLetterRequest):
+async def cover_letter(req: CoverLetterRequest, _user: User = Depends(require_active_subscription)):
     bullets_text = "\n".join(f"- {b}" for b in req.topBullets[:5])
     user_prompt = f"""Name: {req.name}
 Target Role: {req.targetRole}
@@ -95,7 +97,7 @@ Top Resume Bullets:
 
 
 @router.post("/ats/analyze")
-async def ats_analyze(request: dict[str, Any]):
+async def ats_analyze(request: dict[str, Any], _user: User = Depends(require_active_subscription)):
     jd = request.get("job_description", "").strip()
     resume = request.get("resume_text", "").strip()
     if not jd or not resume:

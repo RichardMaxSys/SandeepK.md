@@ -3,8 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Sparkles, Search, Bell, Download, ChevronDown, type LucideIcon } from "lucide-react";
-import { Avatar, Badge, Button, cn } from "@/components/ui/base";
+import { Sparkles, Search, Bell, Download, type LucideIcon } from "lucide-react";
+import { Badge, Button, cn } from "@/components/ui/base";
+import { UserMenu } from "@/components/auth/user-menu";
 
 /* -------------------------------------------------------------------------- */
 /*                                 Tab model                                  */
@@ -52,9 +53,10 @@ export interface TopNavProps {
   active: TabKey;
   onChange: (key: TabKey) => void;
   onExport?: () => void;
+  onOpenAuth?: () => void;
 }
 
-export const TopNav: React.FC<TopNavProps> = ({ active, onChange, onExport }) => {
+export const TopNav: React.FC<TopNavProps> = ({ active, onChange, onExport, onOpenAuth }) => {
   const activeTab = TABS.find((t) => t.key === active) ?? TABS[0];
 
   return (
@@ -105,14 +107,7 @@ export const TopNav: React.FC<TopNavProps> = ({ active, onChange, onExport }) =>
             <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-accent-400" />
           </button>
 
-          <button className="flex items-center gap-2.5 h-9 pl-1 pr-2 rounded-lg border border-line hover:bg-white/5 transition-colors">
-            <Avatar name="Sandeep K" size={28} />
-            <div className="hidden md:block text-left leading-tight">
-              <p className="text-xs font-medium text-ink">Sandeep K</p>
-              <p className="text-2xs text-ink-subtle">Pro</p>
-            </div>
-            <ChevronDown size={14} className="text-ink-subtle hidden md:block" />
-          </button>
+          <UserMenu onOpenAuth={() => onOpenAuth?.()} />
         </div>
       </div>
 

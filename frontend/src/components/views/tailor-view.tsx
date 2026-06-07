@@ -13,6 +13,7 @@ import { runAts } from "@/lib/ats-engine";
 import { rewriteResumeWithLlm, generateCoverLetter, compareKeywords, type KeywordAnalysis, type RewriteSource, type LlmRewriteResult } from "@/lib/ai-rewrite";
 import { usePdfExport } from "@/components/builder/use-pdf-export";
 import { getTemplate, TEMPLATES } from "@/lib/templates";
+import { useAuth, authHeaders } from "@/lib/auth-store";
 
 const STORAGE_KEY_JD = "careerai.jd.v1";
 
@@ -82,6 +83,7 @@ export const TailorView: React.FC = () => {
     versions,
     resume, createTailoredVersion,
   } = useResume();
+  const { token, user, isPro, rewritesRemaining, refreshUser } = useAuth();
 
   if (!resume || !resume.contact || (!resume.contact.name && resume.experience.length === 0)) {
     return (
@@ -204,6 +206,16 @@ export const TailorView: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!jd.trim()) return;
+
+    // Auth gate — must be logged in for LLM rewrite
+    if (!user) {
+      window.dispatchEvent(new CustomEvent("careerai:open-auth"));
+      return;
+    }
+    if (!isPro && rewritesRemaining <= 0) {
+      setError("You've used all 3 free AI rewrites. Upgrade to Pro for unlimited access.");
+      return;
+    }
 
     setRewriting(true);
     setRewriteResults([]);
@@ -431,11 +443,19 @@ export const TailorView: React.FC = () => {
 
       const res = await fetch(`${BACKEND_URL}/api/ats/analyze`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(token),
         body: JSON.stringify({ job_description: jd, resume_text: resumeText }),
       });
+      if (res.status === 403) {
+        const data = await res.json();
+        const msg = data.detail?.message ?? "Upgrade to Pro to continue.";
+        setAtsResult({ error: msg });
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setAtsResult(await res.json());
+      // Refresh user to update rewrites_used counter
+      refreshUser();
     } catch (err) {
       console.warn("[tailor] ATS check failed", err);
       setAtsResult({ error: "ATS check unavailable. Try again later." });

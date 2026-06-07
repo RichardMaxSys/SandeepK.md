@@ -7,24 +7,45 @@ import { BuilderView } from "@/components/views/builder-view";
 import { CheckView } from "@/components/views/check-view";
 import { TailorView } from "@/components/views/tailor-view";
 import { ResumeProvider } from "@/lib/resume-store";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 export default function AppPage() {
   const [tab, setTab] = React.useState<TabKey>("builder");
+  const [authOpen, setAuthOpen] = React.useState(false);
+  const [authDefaultTab, setAuthDefaultTab] = React.useState<"login" | "signup">("login");
 
-  // Listen for cross-tab navigation (e.g., "Go back to Tailor" from Check)
+  // Listen for cross-tab navigation and auth events
   React.useEffect(() => {
     const onNav = (e: Event) => {
       const detail = (e as CustomEvent).detail as { tab?: TabKey };
       if (detail?.tab) setTab(detail.tab);
     };
+    const onOpenAuth = () => {
+      setAuthDefaultTab("login");
+      setAuthOpen(true);
+    };
+    const onOpenCheckout = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { plan?: string };
+      // Trigger upgrade flow — open checkout in new window
+      // The user menu handles the actual API call; this is a fallback
+      setAuthDefaultTab("login");
+      setAuthOpen(true);
+    };
+
     window.addEventListener("careerai:navigate", onNav);
-    return () => window.removeEventListener("careerai:navigate", onNav);
+    window.addEventListener("careerai:open-auth", onOpenAuth);
+    window.addEventListener("careerai:open-checkout", onOpenCheckout);
+    return () => {
+      window.removeEventListener("careerai:navigate", onNav);
+      window.removeEventListener("careerai:open-auth", onOpenAuth);
+      window.removeEventListener("careerai:open-checkout", onOpenCheckout);
+    };
   }, []);
 
   return (
     <ResumeProvider>
       <div className="min-h-screen flex flex-col bg-canvas text-ink">
-        <TopNav active={tab} onChange={setTab} />
+        <TopNav active={tab} onChange={setTab} onOpenAuth={() => setAuthOpen(true)} />
 
         <main className="flex-1">
           <div className="max-w-[1400px] mx-auto p-6 lg:p-8">
@@ -67,6 +88,12 @@ export default function AppPage() {
             </AnimatePresence>
           </div>
         </main>
+
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          defaultTab={authDefaultTab}
+        />
       </div>
     </ResumeProvider>
   );

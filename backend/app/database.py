@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@db:5432/job_assistant")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./careerai.db")
 
 _engine = None
 _SessionLocal = None
@@ -13,7 +13,8 @@ Base = declarative_base()
 def _get_engine():
     global _engine
     if _engine is None:
-        _engine = create_engine(DATABASE_URL)
+        connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+        _engine = create_engine(DATABASE_URL, connect_args=connect_args)
     return _engine
 
 

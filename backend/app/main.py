@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from .database import Base, get_db, ensure_tables
 from .models import Resume, Job, ApplicationPackage
+from .models.user import User, Subscription  # noqa — needed for table creation
 from .services.ai_service import parse_resume, analyze_ats, tailor_resume
 from .services.job_search_service import search_jobs, compute_match_score
 from .worker import process_application_package
@@ -14,12 +15,16 @@ import io
 import datetime
 from pdfminer.high_level import extract_text as extract_pdf_text
 from .routers.ai import router as ai_router
+from .routers.auth import router as auth_router
+from .routers.payments import router as payments_router
 
 ensure_tables()
 
 app = FastAPI(title="Personal Job Application Assistant")
 
 app.include_router(ai_router)
+app.include_router(auth_router)
+app.include_router(payments_router)
 
 app.add_middleware(
     CORSMiddleware,
