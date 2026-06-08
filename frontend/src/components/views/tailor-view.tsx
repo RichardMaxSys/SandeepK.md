@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles, CheckCircle2, AlertTriangle, AlertCircle, Copy, Download,
-  Check, Wand2, FileSignature, Sparkle,
+  Check, Wand2, FileSignature, Sparkle, Eye, EyeOff,
   Linkedin, Bell, ListChecks, Save,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
@@ -15,7 +15,7 @@ import { usePdfExport } from "@/components/builder/use-pdf-export";
 import { getTemplate, TEMPLATES } from "@/lib/templates";
 import { useAuth, authHeaders } from "@/lib/auth-store";
 
-const STORAGE_KEY_JD = "careerai.jd.v1";
+const STORAGE_KEY_JD = "resumeelevate.jd.v1";
 
 const SAMPLE_JD = `Senior Python Developer — TechCorp, Toronto
 
@@ -90,7 +90,7 @@ export const TailorView: React.FC = () => {
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-ink-muted text-lg">No resume found.</p>
         <button
-          onClick={() => window.dispatchEvent(new CustomEvent("careerai:navigate", { detail: { tab: "builder" } }))}
+          onClick={() => window.dispatchEvent(new CustomEvent("resumeelevate:navigate", { detail: { tab: "builder" } }))}
           className="text-accent-500 underline"
         >
           Build one first →
@@ -209,7 +209,7 @@ export const TailorView: React.FC = () => {
 
     // Auth gate — must be logged in for LLM rewrite
     if (!user) {
-      window.dispatchEvent(new CustomEvent("careerai:open-auth"));
+      window.dispatchEvent(new CustomEvent("resumeelevate:open-auth"));
       return;
     }
     if (!isPro && rewritesRemaining <= 0) {
@@ -511,6 +511,58 @@ export const TailorView: React.FC = () => {
 
   const hasRewrites = rewriteResults.length > 0;
 
+  /* ── Live preview of assembled resume with accepted changes ─────────── */
+  const [showPreview, setShowPreview] = React.useState(false);
+
+  const changedIndices = React.useMemo(() => {
+    const set = new Set<number>();
+    acceptedIndices.forEach((idx) => {
+      const r = rewriteResults[idx];
+      if (r?.changed) set.add(idx);
+    });
+    return set;
+  }, [acceptedIndices, rewriteResults]);
+
+  const previewData = React.useMemo(() => {
+    if (!hasRewrites) return null;
+    const meta = bulletMetaRef.current;
+    const assembled = {
+      summary: sourceResume.summary,
+      experience: sourceResume.experience.map((e) => ({
+        ...e,
+        bullets: [...e.bullets],
+      })),
+      projects: sourceResume.projects.map((p) => ({
+        ...p,
+        bullets: [...p.bullets],
+      })),
+    };
+
+    acceptedIndices.forEach((idx) => {
+      const m = meta[idx];
+      const r = rewriteResults[idx];
+      if (!r || !m) return;
+      const text = r.after;
+      if (!text) return;
+
+      if (m.type === "summary") {
+        assembled.summary = text;
+      } else if (m.type === "experience") {
+        const exp = assembled.experience[m.expIndex];
+        if (exp && exp.bullets[m.bulletIndex] !== undefined) {
+          exp.bullets[m.bulletIndex] = text;
+        }
+      } else if (m.type === "project") {
+        const proj = assembled.projects[m.expIndex];
+        if (proj && proj.bullets[m.bulletIndex] !== undefined) {
+          proj.bullets[m.bulletIndex] = text;
+        }
+      }
+    });
+
+    return assembled;
+  }, [hasRewrites, acceptedIndices, sourceResume, rewriteResults]);
+
   /* ────────────────────────────────────────────────────────────────────── */
   /*                               Render                                   */
   /* ────────────────────────────────────────────────────────────────────── */
@@ -713,10 +765,23 @@ export const TailorView: React.FC = () => {
                     {allDecided && " · all reviewed"}
                   </p>
                 </div>
-                <Button variant="primary" size="md" onClick={acceptAll} disabled={allDecided}>
-                  <Check size={14} />
-                  Accept all
-                </Button>
+                <div className="flex items-center gap-2">
+                  {previewData && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPreview((v) => !v)}
+                      aria-expanded={showPreview}
+                    >
+                      {showPreview ? <EyeOff size={14} /> : <Eye size={14} />}
+                      <span className="hidden sm:inline">{showPreview ? "Hide preview" : "Show preview"}</span>
+                    </Button>
+                  )}
+                  <Button variant="primary" size="md" onClick={acceptAll} disabled={allDecided}>
+                    <Check size={14} />
+                    Accept all
+                  </Button>
+                </div>
               </div>
 
               {/* Save button row */}
@@ -768,6 +833,44 @@ export const TailorView: React.FC = () => {
                 )}
               </AnimatePresence>
             </Card>
+
+            {/* ── Live tailored resume preview ── */}
+            <AnimatePresence>
+              {showPreview && previewData && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <Card className="p-5 border-accent-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-md bg-accent-500/15 border border-accent-500/30 flex items-center justify-center">
+                          <Eye size={13} className="text-accent-300" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-ink">Tailored resume preview</h3>
+                          <p className="text-2xs text-ink-muted">
+                            Assembled from accepted rewrites &middot; {changedIndices.size} of {totalCount} bullet{totalCount !== 1 ? "s" : ""} changed
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)} className="sm:hidden">
+                        <EyeOff size={14} /> Hide
+                      </Button>
+                    </div>
+                    <TailoredPreview
+                      resume={sourceResume}
+                      previewData={previewData}
+                      changedBullets={changedIndices}
+                      meta={bulletMetaRef.current}
+                    />
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Grouped diff cards */}
             {grouped.map(([section, items]) => (
@@ -1011,6 +1114,139 @@ export const TailorView: React.FC = () => {
           </div>
         </div>
       </Card>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                     Live Tailored Resume Preview                           */
+/* -------------------------------------------------------------------------- */
+
+interface PreviewData {
+  summary: string;
+  experience: Array<{ id: string; role: string; company: string; start: string; end: string; bullets: string[] }>;
+  projects: Array<{ id: string; name: string; bullets: string[]; tech: string[] }>;
+}
+
+const TailoredPreview: React.FC<{
+  resume: {
+    contact: { name?: string; title?: string; email?: string; phone?: string; location?: string };
+    education: Array<{ id: string; degree: string; field: string; school: string; start: string; end: string }>;
+    skills: string[];
+  };
+  previewData: PreviewData;
+  changedBullets: Set<number>;
+  meta: BulletMeta[];
+}> = ({ resume, previewData, changedBullets, meta }) => {
+  function isChanged(type: BulletMeta["type"], expIndex: number, bulletIndex: number): boolean {
+    return meta.some((m) => m.type === type && m.expIndex === expIndex && m.bulletIndex === bulletIndex && changedBullets.has(m.index));
+  }
+
+  return (
+    <div className="space-y-5 text-sm leading-relaxed max-h-[600px] overflow-y-auto pr-1">
+      {/* Contact info */}
+      <div>
+        <p className="text-base font-semibold text-ink">{resume.contact.name || "(Your name)"}</p>
+        <p className="text-xs text-ink-muted mt-0.5">{resume.contact.title}</p>
+        <p className="text-xs text-ink-subtle mt-1">
+          {[resume.contact.email, resume.contact.phone, resume.contact.location].filter(Boolean).join(" · ") || "Contact info"}
+        </p>
+      </div>
+
+      {/* Summary */}
+      {previewData.summary && (
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-accent-300 mb-1.5">Summary</h4>
+          <p className="text-xs text-ink-muted leading-relaxed">{previewData.summary}</p>
+        </div>
+      )}
+
+      {/* Experience */}
+      {previewData.experience.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-accent-300 mb-2">Experience</h4>
+          <div className="space-y-3">
+            {previewData.experience.map((exp, ei) => (
+              <div key={exp.id}>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-semibold text-ink">
+                    {exp.role} <span className="font-normal text-ink-muted">· {exp.company}</span>
+                  </p>
+                  <p className="text-2xs text-ink-subtle tabular-nums">{exp.start} — {exp.end}</p>
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {exp.bullets.filter(Boolean).map((b, bi) => {
+                    const changed = isChanged("experience", ei, bi);
+                    return (
+                      <li key={bi} className="flex items-start gap-2 text-xs text-ink-muted">
+                        <span className="text-ink-subtle shrink-0 mt-0.5">·</span>
+                        <span className="flex-1">{b}</span>
+                        {changed && (
+                          <span className="shrink-0 text-2xs font-medium text-success px-1 py-0.5 rounded bg-success/[0.08] border border-success/20 whitespace-nowrap">
+                            Changed
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Projects */}
+      {previewData.projects.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-accent-300 mb-2">Projects</h4>
+          <div className="space-y-2">
+            {previewData.projects.map((proj, pi) => (
+              <div key={proj.id}>
+                <p className="text-sm font-semibold text-ink">{proj.name}</p>
+                {proj.tech.length > 0 && (
+                  <p className="text-2xs text-ink-subtle mt-0.5">{proj.tech.join(" · ")}</p>
+                )}
+                <ul className="mt-1 space-y-1">
+                  {proj.bullets.filter(Boolean).map((b, bi) => {
+                    const changed = isChanged("project", pi, bi);
+                    return (
+                      <li key={bi} className="flex items-start gap-2 text-xs text-ink-muted">
+                        <span className="text-ink-subtle shrink-0 mt-0.5">·</span>
+                        <span className="flex-1">{b}</span>
+                        {changed && (
+                          <span className="shrink-0 text-2xs font-medium text-success px-1 py-0.5 rounded bg-success/[0.08] border border-success/20 whitespace-nowrap">
+                            Changed
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Education + Skills */}
+      {resume.education.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-accent-300 mb-1.5">Education</h4>
+          {resume.education.map((e) => (
+            <p key={e.id} className="text-xs text-ink-muted">
+              <span className="font-semibold text-ink">{e.degree} {e.field}</span> · {e.school} · {e.start}–{e.end}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {resume.skills.length > 0 && (
+        <div>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-accent-300 mb-1.5">Skills</h4>
+          <p className="text-xs text-ink-muted">{resume.skills.join(" · ")}</p>
+        </div>
+      )}
     </div>
   );
 };

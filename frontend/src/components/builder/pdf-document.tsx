@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * React-PDF <Document /> component that renders a ResumeData + TemplateDef
@@ -163,7 +163,7 @@ function makeStyles(template: TemplateDef) {
 export interface ResumeDocumentProps {
   resume: ResumeData;
   template: TemplateDef;
-  /** When true, adds a "Created with CareerAI" watermark behind the content. */
+  /** When true, adds a "Created with ResumeElevate" watermark behind the content. */
   watermark?: boolean;
   /** Per-version AI skills (optional). When set + aiSkills.includeInResume, rendered in the skills section. */
   aiSkills?: {
@@ -194,7 +194,7 @@ export const ResumeDocument: React.FC<ResumeDocumentProps> = ({ resume, template
         {/* Watermark sits behind everything */}
         {watermark && (
           <View style={s.watermarkContainer} fixed>
-            <Text style={s.watermarkText}>CareerAI</Text>
+            <Text style={s.watermarkText}>ResumeElevate</Text>
           </View>
         )}
 

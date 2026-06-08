@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ChevronDown, Plus, Copy, Trash2, Check, Pencil, X, FileText, Briefcase,
 } from "lucide-react";

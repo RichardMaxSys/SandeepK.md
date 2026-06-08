@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 
@@ -183,9 +183,9 @@ export interface ResumeVersion {
   aiSkills: AiSkillsState;
 }
 
-const LEGACY_STORAGE_KEY = "careerai.resume.v1";
-const VERSIONS_STORAGE_KEY = "careerai.versions.v1";
-const ACTIVE_VERSION_STORAGE_KEY = "careerai.activeVersion.v1";
+const LEGACY_STORAGE_KEY = "resumeelevate.resume.v1";
+const VERSIONS_STORAGE_KEY = "resumeelevate.versions.v1";
+const ACTIVE_VERSION_STORAGE_KEY = "resumeelevate.activeVersion.v1";
 const BASE_VERSION_ID = "base";
 
 function uid(prefix: string) {

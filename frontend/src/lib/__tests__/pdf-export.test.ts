@@ -84,9 +84,11 @@ describe("ResumeDocument PDF generation (end-to-end)", () => {
     const { EMPTY_RESUME } = await import("@/lib/resume-store");
 
     const t = TEMPLATES[0];
+    // @ts-ignore - @react-pdf/renderer DocumentProps vs ResumeDocumentProps mismatch
     const plain = await pdf(React.createElement(ResumeDocument, {
       resume: EMPTY_RESUME, template: t, watermark: false,
     })).toBlob();
+    // @ts-ignore - @react-pdf/renderer DocumentProps vs ResumeDocumentProps mismatch
     const wm = await pdf(React.createElement(ResumeDocument, {
       resume: EMPTY_RESUME, template: t, watermark: true,
     })).toBlob();
@@ -102,9 +104,11 @@ describe("ResumeDocument PDF generation (end-to-end)", () => {
     const { EMPTY_RESUME } = await import("@/lib/resume-store");
 
     const t = TEMPLATES[0];
+    // @ts-ignore - @react-pdf/renderer DocumentProps vs ResumeDocumentProps mismatch
     const noAI = await pdf(React.createElement(ResumeDocument, {
       resume: EMPTY_RESUME, template: t,
     })).toBlob();
+    // @ts-ignore - @react-pdf/renderer DocumentProps vs ResumeDocumentProps mismatch
     const withAI = await pdf(React.createElement(ResumeDocument, {
       resume: EMPTY_RESUME, template: t,
       aiSkills: {

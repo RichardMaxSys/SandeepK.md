@@ -16,10 +16,15 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Career Intelligence — Job Application Assistant",
-  description:
-    "AI-powered career intelligence platform. Find jobs, beat the ATS, tailor your resume, and track applications end-to-end.",
-};
+  title: 'ResumeElevate — AI Resume Builder & ATS Optimizer',
+  description: 'Build a resume that gets past ATS and gets more interviews. Create, check, and tailor every resume with AI — then export polished PDF or DOCX files in minutes.',
+  openGraph: {
+    title: 'ResumeElevate — AI Resume Builder & ATS Optimizer',
+    description: 'Build a resume that gets past ATS and gets more interviews.',
+    siteName: 'ResumeElevate',
+    type: 'website',
+  },
+}
 
 export default function RootLayout({
   children,

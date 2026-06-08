@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Download, FileText, Filter, Grid3x3, Eye, Edit3, Sparkles, X, CheckCircle2, Lock, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Search, Download, FileText, Eye, Edit3, Sparkles, X, CheckCircle2, Lock } from "lucide-react";
 import { Button, Card, Badge, cn } from "@/components/ui/base";
+import { WeightedBreakdown } from "@/components/ui/weighted-breakdown";
 import { TemplateCard, TEMPLATES } from "@/components/builder/template-card";
 import { ResumeForm } from "@/components/builder/resume-form";
 import { VersionSelector } from "@/components/version-selector";
@@ -14,7 +15,7 @@ import { usePdfExport } from "@/components/builder/use-pdf-export";
 import { useDocxExport } from "@/components/builder/use-docx-export";
 import { canUse, recordUse, getUsage, isPro as isProUser, timeUntilReset, LIMITS } from "@/lib/usage-limits";
 
-const STORAGE_KEY_TEMPLATE = "careerai.template.v1";
+const STORAGE_KEY_TEMPLATE = "resumeelevate.template.v1";
 
 export const BuilderView: React.FC = () => {
   const { resume, aiSkills, activeVersionId, versions } = useResume();
@@ -109,9 +110,22 @@ export const BuilderView: React.FC = () => {
     }
   };
 
+  // Category alias map: legacy builder labels → new catalog category values
+  const CATEGORY_ALIAS: Record<string, string[]> = {
+    minimal: ["minimal", "minimalist"],
+    modern: ["modern"],
+    classic: ["professional", "classic"],
+    creative: ["creative"],
+    executive: ["executive"],
+    technical: ["tech", "technical"],
+  };
+
   const filtered = React.useMemo(() => {
     return TEMPLATES.filter((t) => {
-      if (cat !== "all" && t.category !== cat) return false;
+      if (cat !== "all") {
+        const aliases = CATEGORY_ALIAS[cat] ?? [cat];
+        if (!aliases.includes(t.category.toLowerCase())) return false;
+      }
       if (query && !t.name.toLowerCase().includes(query.toLowerCase()) && !t.tagline.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
@@ -153,7 +167,7 @@ export const BuilderView: React.FC = () => {
           <p className="text-2xs font-medium uppercase tracking-wider text-accent-300">Builder</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Pick a template. Edit. Export.</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            18 pro templates. Your data is saved locally. Switch any time.
+            200 ATS-optimized templates. Your data is saved locally. Switch any time.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -233,6 +247,9 @@ export const BuilderView: React.FC = () => {
                 </button>
               ))}
             </div>
+            <div className="mt-2 text-2xs text-ink-subtle">
+              {TEMPLATES.length} templates
+            </div>
           </Card>
 
           <div className="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
@@ -294,24 +311,12 @@ export const BuilderView: React.FC = () => {
               <ScoreRing value={report.overall} />
             </div>
 
-            <div className="mt-4 space-y-2.5">
-              {Object.values(report.dimensions).map((d) => (
-                <div key={d.key}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-ink-muted">{d.label}</span>
-                    <span className="text-ink font-semibold tabular-nums">{d.score}</span>
-                  </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        d.score >= 80 ? "bg-success" : d.score >= 60 ? "bg-accent-500" : d.score >= 40 ? "bg-amber-500" : "bg-danger",
-                      )}
-                      style={{ width: `${d.score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="mt-4">
+              <WeightedBreakdown
+                compact
+                dims={Object.values(report.dimensions)}
+                overall={report.overall}
+              />
             </div>
 
             {report.totalBullets > 0 && (

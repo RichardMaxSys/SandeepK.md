@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
-const TOKEN_KEY = "careerai.token";
+const TOKEN_KEY = "resumeelevate.token";
 
 export interface User {
   id: string;

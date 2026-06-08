@@ -1,13 +1,14 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import {
   Upload, FileText, AlertCircle, AlertTriangle, CheckCircle2, X, Sparkles, Lightbulb,
   Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight, ArrowLeft, Download,
   FileSignature, Wand2, Check, Briefcase,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
+import { WeightedBreakdown } from "@/components/ui/weighted-breakdown";
 import { runAts, GENERIC_PHRASES, type AtsReport } from "@/lib/ats-engine";
 import { useResume, BASE_VERSION } from "@/lib/resume-store";
 import { VersionSelector } from "@/components/version-selector";
@@ -17,7 +18,7 @@ export const CheckView: React.FC = () => {
   if (!resume || !resume.contact || (!resume.contact.name && resume.experience.length === 0)) {
     return <div className="flex flex-col items-center justify-center h-64 gap-4">
       <p className="text-ink-muted text-lg">No resume found.</p>
-      <button onClick={() => window.dispatchEvent(new CustomEvent('careerai:navigate', { detail: { tab: 'builder' } }))}
+      <button onClick={() => window.dispatchEvent(new CustomEvent('resumeelevate:navigate', { detail: { tab: 'builder' } }))}
         className="text-accent-500 underline">Build one first →</button>
     </div>
   }
@@ -84,6 +85,20 @@ export const CheckView: React.FC = () => {
     }
     return out;
   }, [report]);
+
+  const suggestionFor = (msg: string): string | null => {
+    if (msg.includes("Missing") && msg.includes("keywords")) return "Paste this JD in the Tailor tab to add missing keywords.";
+    if (msg.toLowerCase().includes("generic phrase") || msg.toLowerCase().includes("generic")) return "Replace with a concrete achievement in the Build tab.";
+    if (msg.includes("weak verb")) return "Swap for action verbs: Built, Led, Reduced, Drove, Launched.";
+    if (msg.includes("number") || msg.includes("quantified") || msg.includes("% of bullet")) return "Add a metric: users, revenue, % improvement, or time saved.";
+    if (msg.includes("Missing email")) return "Add your email in the Build tab contact section.";
+    if (msg.includes("Missing")) return "Add the missing section in the Build tab.";
+    if (msg.includes("No experience")) return "Add work experience in the Build tab first.";
+    if (msg.includes("No education")) return "Add your education in the Build tab.";
+    if (msg.includes("short")) return "Expand with more detail to strengthen this section.";
+    if (msg.includes("long") || msg.includes("dense")) return "Condense to 1-2 lines per bullet for readability.";
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -235,13 +250,34 @@ export const CheckView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {Object.values(report.dimensions).map((d) => (
-                  <DimensionCard key={d.key} dim={d} />
-                ))}
-              </div>
+              <WeightedBreakdown dims={Object.values(report.dimensions)} overall={report.overall} />
             </div>
           </Card>
+
+          {/* Mobile dimension details (positive signals visible early) */}
+          <div className="lg:hidden space-y-3">
+            {Object.values(report.dimensions).map((d) => (
+              <Card key={d.key} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-ink">{d.label}</h3>
+                  <Badge tone={
+                    d.score >= 80 ? "success" : d.score >= 60 ? "accent" : d.score >= 40 ? "warning" : "danger"
+                  } className="font-mono tabular-nums">{d.score}</Badge>
+                </div>
+                <p className="text-2xs text-ink-muted leading-relaxed">{d.description}</p>
+                {d.positiveSignals.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {d.positiveSignals.map((s, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-ink-muted">
+                        <CheckCircle2 size={11} className="text-success shrink-0 mt-0.5" />
+                        <span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            ))}
+          </div>
 
           {/* Findings list */}
           <Card className="p-6">
@@ -287,9 +323,16 @@ export const CheckView: React.FC = () => {
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-ink leading-snug">{it.message}</p>
-                      <p className="text-2xs text-ink-subtle mt-1">
-                        {it.dimension}
-                      </p>
+                      <p className="text-2xs text-ink-subtle mt-1">{it.dimension}</p>
+                      {(() => {
+                        const tip = suggestionFor(it.message);
+                        return tip ? (
+                          <p className="text-2xs text-accent-300 mt-1.5 flex items-center gap-1">
+                            <ArrowRight size={10} className="shrink-0" />
+                            {tip}
+                          </p>
+                        ) : null;
+                      })()}
                     </div>
                   </motion.li>
                 ))}
@@ -344,13 +387,15 @@ export const CheckView: React.FC = () => {
           </Card>
         </div>
 
-        {/* RIGHT: dimension detail + positive signals */}
-        <aside className="space-y-3">
+        {/* RIGHT: dimension detail + positive signals (desktop only) */}
+        <aside className="hidden lg:block space-y-3">
           {Object.values(report.dimensions).map((d) => (
             <Card key={d.key} className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-ink">{d.label}</h3>
-                <ScoreChip score={d.score} />
+                <Badge tone={
+                  d.score >= 80 ? "success" : d.score >= 60 ? "accent" : d.score >= 40 ? "warning" : "danger"
+                } className="font-mono tabular-nums">{d.score}</Badge>
               </div>
               <p className="text-2xs text-ink-muted leading-relaxed">{d.description}</p>
               {d.positiveSignals.length > 0 && (
@@ -394,22 +439,18 @@ export const CheckView: React.FC = () => {
                 // Switch to the base resume + navigate user to Tailor with the same JD pre-filled
                 setActiveVersion(BASE_VERSION);
                 // Use sessionStorage so the Tailor tab can read the JD
-                if (jdActive && jdDraft) sessionStorage.setItem("careerai.tailor.jd", jdDraft);
+                if (jdActive && jdDraft) sessionStorage.setItem("resumeelevate.tailor.jd", jdDraft);
                 // Trigger tab change via a custom event
-                window.dispatchEvent(new CustomEvent("careerai:navigate", { detail: { tab: "tailor" } }));
+                window.dispatchEvent(new CustomEvent("resumeelevate:navigate", { detail: { tab: "tailor" } }));
               }}>
                 <ArrowLeft size={14} /> Go back to Tailor
               </Button>
             )}
-            <Button variant="primary" size="md" disabled>
-              <Download size={14} /> Download ATS-optimized (PDF / DOCX)
-            </Button>
+            <span className="text-2xs text-ink-subtle flex items-center gap-1">
+              <Download size={11} /> PDF export — next patch
+            </span>
           </div>
         </div>
-        <p className="mt-3 text-2xs text-ink-subtle">
-          <Info size={10} className="inline mr-1 -mt-0.5" />
-          PDF / DOCX export ships in the next patch. The download will use the exact resume content that was just checked.
-        </p>
       </Card>
     </div>
   );
@@ -419,26 +460,4 @@ export const CheckView: React.FC = () => {
 /*                              Subcomponents                                 */
 /* -------------------------------------------------------------------------- */
 
-const DimensionCard: React.FC<{ dim: { key: string; label: string; score: number; weight: number; description: string } }> = ({ dim }) => {
-  const color = dim.score >= 80 ? "text-success" : dim.score >= 60 ? "text-accent-300" : dim.score >= 40 ? "text-amber-300" : "text-danger";
-  return (
-    <div className="rounded-xl border border-line bg-canvas-subtle p-3">
-      <p className="text-2xs font-medium uppercase tracking-wider text-ink-subtle">{dim.label}</p>
-      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", color)}>{dim.score}</p>
-      <div className="mt-1.5 h-1 rounded-full bg-white/[0.04] overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full",
-            dim.score >= 80 ? "bg-success" : dim.score >= 60 ? "bg-accent-500" : dim.score >= 40 ? "bg-amber-500" : "bg-danger",
-          )}
-          style={{ width: `${dim.score}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const ScoreChip: React.FC<{ score: number }> = ({ score }) => {
-  const color = score >= 80 ? "success" : score >= 60 ? "accent" : score >= 40 ? "warning" : "danger";
-  return <Badge tone={color as any} className="font-mono tabular-nums">{score}</Badge>;
-};
+// WeightedBreakdown extracted to src/components/ui/weighted-breakdown.tsx

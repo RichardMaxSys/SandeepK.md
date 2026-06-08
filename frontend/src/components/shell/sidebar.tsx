@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import {
   LayoutDashboard, Briefcase, FileText, BarChart3, KanbanSquare, Settings, Sparkles,
   type LucideIcon,
@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ active, onChange }) => {
           <Sparkles size={18} className="text-white" />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold text-ink tracking-tight">CareerAI</p>
+          <p className="text-sm font-semibold text-ink tracking-tight">ResumeElevate</p>
           <p className="text-2xs text-ink-subtle uppercase tracking-wider">Intelligence</p>
         </div>
       </div>

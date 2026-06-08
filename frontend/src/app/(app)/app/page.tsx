@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { TopNav, TabContextBar, type TabKey } from "@/components/shell/top-nav";
+import { motion, AnimatePresence } from "motion/react";
+import { AppTopNav, TabContextBar, type TabKey } from "@/components/shell/top-nav";
 import { BuilderView } from "@/components/views/builder-view";
 import { CheckView } from "@/components/views/check-view";
 import { TailorView } from "@/components/views/tailor-view";
@@ -32,20 +32,20 @@ export default function AppPage() {
       setAuthOpen(true);
     };
 
-    window.addEventListener("careerai:navigate", onNav);
-    window.addEventListener("careerai:open-auth", onOpenAuth);
-    window.addEventListener("careerai:open-checkout", onOpenCheckout);
+    window.addEventListener("resumeelevate:navigate", onNav);
+    window.addEventListener("resumeelevate:open-auth", onOpenAuth);
+    window.addEventListener("resumeelevate:open-checkout", onOpenCheckout);
     return () => {
-      window.removeEventListener("careerai:navigate", onNav);
-      window.removeEventListener("careerai:open-auth", onOpenAuth);
-      window.removeEventListener("careerai:open-checkout", onOpenCheckout);
+      window.removeEventListener("resumeelevate:navigate", onNav);
+      window.removeEventListener("resumeelevate:open-auth", onOpenAuth);
+      window.removeEventListener("resumeelevate:open-checkout", onOpenCheckout);
     };
   }, []);
 
   return (
     <ResumeProvider>
       <div className="min-h-screen flex flex-col bg-canvas text-ink">
-        <TopNav active={tab} onChange={setTab} onOpenAuth={() => setAuthOpen(true)} />
+        <AppTopNav active={tab} onChange={setTab} onOpenAuth={() => setAuthOpen(true)} />
 
         <main className="flex-1">
           <div className="max-w-[1400px] mx-auto p-6 lg:p-8">

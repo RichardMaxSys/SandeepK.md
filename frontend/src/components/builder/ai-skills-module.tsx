@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles, Plus, X, ChevronDown, Check, Wand2, Eye, EyeOff, AlertCircle,
 } from "lucide-react";

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { LogOut, Sparkles, User, ChevronDown, Loader2 } from "lucide-react";
 import { Button, cn } from "@/components/ui/base";
 import { useAuth } from "@/lib/auth-store";
@@ -119,7 +119,7 @@ export function UserMenu({ onOpenAuth }: UserMenuProps) {
                   onClick={() => {
                     setOpen(false);
                     // Trigger upgrade flow — redirect to pricing
-                    const event = new CustomEvent("careerai:open-checkout", { detail: { plan: "monthly" } });
+                    const event = new CustomEvent("resumeelevate:open-checkout", { detail: { plan: "monthly" } });
                     window.dispatchEvent(event);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-ink hover:bg-accent-500/15 hover:text-accent-300 transition-colors"

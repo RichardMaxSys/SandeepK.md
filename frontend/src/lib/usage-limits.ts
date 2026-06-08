@@ -1,4 +1,4 @@
-/* -------------------------------------------------------------------------- */
+﻿/* -------------------------------------------------------------------------- */
 /*                              Usage / rate limits                            */
 /* -------------------------------------------------------------------------- */
 /*                                                                              */
@@ -7,7 +7,7 @@
 /* backend will need to honor, so swapping in a server check is a one-liner.   */
 /*                                                                              */
 
-const STORAGE_KEY = "careerai.usage.v1";
+const STORAGE_KEY = "resumeelevate.usage.v1";
 
 export type FeatureKey = "atsCheck" | "tailor" | "pdfExport";
 
@@ -87,8 +87,8 @@ function filterToPeriod(timestamps: number[], period: FeatureLimit["period"]): n
 /* ----------------------------- Public API ----------------------------- */
 
 export function isPro(): boolean {
-  // Dev override: check for a "careerai.pro" flag in localStorage
-  if (typeof window !== "undefined" && localStorage.getItem("careerai.pro") === "true") {
+  // Dev override: check for a "resumeelevate.pro" flag in localStorage
+  if (typeof window !== "undefined" && localStorage.getItem("resumeelevate.pro") === "true") {
     return true;
   }
   return typeof read().proSince === "number";

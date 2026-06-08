@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { X, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { Button, cn } from "@/components/ui/base";
 import { useAuth } from "@/lib/auth-store";
