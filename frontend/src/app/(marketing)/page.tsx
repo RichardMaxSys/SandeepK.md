@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import type { Variants } from "motion/react";
 import { Button, Card, cn } from "@/components/ui/base";
+import DemoVideoSection from "@/components/sections/demo-video-section";
 
 /* -------------------------------------------------------------------------- */
 /*  Marketing landing page — /                                                */
@@ -425,6 +426,9 @@ export default function MarketingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* ---- DEMO VIDEO ---- */}
+      <DemoVideoSection />
 
       {/* ---- FEATURES: 3 PILLARS ---- */}
       <section
