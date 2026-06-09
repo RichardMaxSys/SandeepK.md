@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Mail, Phone, MapPin, Globe, Linkedin, Github, GripVertical, Info } from "lucide-react";
+import { Plus, Trash2, Mail, Phone, MapPin, Globe, Linkedin, Github, ChevronUp, ChevronDown, Info } from "lucide-react";
 import { Button, cn, Badge } from "@/components/ui/base";
 import { useResume, BASE_VERSION } from "@/lib/resume-store";
 import { VersionSelector } from "@/components/version-selector";
@@ -185,7 +185,7 @@ export const ResumeForm: React.FC = () => {
                         className="h-4 w-4 rounded flex items-center justify-center text-ink-subtle hover:text-ink hover:bg-white/5 disabled:opacity-20"
                         aria-label="Move bullet up"
                         disabled={i === 0}
-                      >▲</button>
+                      ><ChevronUp size={10} /></button>
                       <button
                         onClick={() => {
                           if (i === exp.bullets.length - 1) return;
@@ -196,7 +196,7 @@ export const ResumeForm: React.FC = () => {
                         className="h-4 w-4 rounded flex items-center justify-center text-ink-subtle hover:text-ink hover:bg-white/5 disabled:opacity-20"
                         aria-label="Move bullet down"
                         disabled={i === exp.bullets.length - 1}
-                      >▼</button>
+                      ><ChevronDown size={10} /></button>
                     </div>
                     <textarea
                       value={b}

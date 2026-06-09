@@ -13,12 +13,14 @@ import { getTemplate, type TemplateDef } from "@/lib/templates";
 import { runAts } from "@/lib/ats-engine";
 import { usePdfExport } from "@/components/builder/use-pdf-export";
 import { useDocxExport } from "@/components/builder/use-docx-export";
-import { canUse, recordUse, getUsage, isPro as isProUser, timeUntilReset, LIMITS } from "@/lib/usage-limits";
+import { recordUse, getUsage, isPro as isProUser, timeUntilReset, LIMITS } from "@/lib/usage-limits";
+import { useAuth } from "@/lib/auth-store";
 
 const STORAGE_KEY_TEMPLATE = "resumeelevate.template.v1";
 
 export const BuilderView: React.FC = () => {
   const { resume, aiSkills, activeVersionId, versions } = useResume();
+  const { isPro: isProAuth } = useAuth(); // backend-backed Pro status, falls back if unauthenticated
   const [templateId, setTemplateId] = React.useState<string>("modern-minimal");
   const [mode, setMode] = React.useState<"edit" | "preview">("edit");
   const [query, setQuery] = React.useState("");
@@ -78,7 +80,7 @@ export const BuilderView: React.FC = () => {
     () => mounted ? getUsage("pdfExport") : { remaining: LIMITS.pdfExport.quota, quota: LIMITS.pdfExport.quota, used: 0, resetsAt: 0 },
     [mounted, quotaTick],
   );
-  const isPro = React.useMemo(() => mounted && isProUser(), [mounted, quotaTick]);
+  const isPro = React.useMemo(() => mounted && (isProAuth || isProUser()), [mounted, quotaTick, isProAuth]);
   const pdfCanExport = !mounted || isPro || pdfQuota.remaining > 0;
 
   const handleDownloadPdf = async () => {

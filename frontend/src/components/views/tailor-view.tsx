@@ -350,6 +350,15 @@ export const TailorView: React.FC = () => {
     setAcceptedIndices(new Set(rewriteResults.map((_, i) => i)));
     setRejectedIndices(new Set());
   };
+  const acceptUndecided = () => {
+    setAcceptedIndices((prev) => {
+      const next = new Set(prev);
+      for (let i = 0; i < rewriteResults.length; i++) {
+        if (!prev.has(i) && !rejectedIndices.has(i)) next.add(i);
+      }
+      return next;
+    });
+  };
 
   /** Number of accept/reject decisions made */
   const decidedCount = acceptedIndices.size + rejectedIndices.size;
@@ -791,7 +800,7 @@ export const TailorView: React.FC = () => {
                       <span className="hidden sm:inline">{showPreview ? "Hide preview" : "Show preview"}</span>
                     </Button>
                   )}
-                  <Button variant="primary" size="md" onClick={acceptAll} disabled={allDecided}>
+                  <Button variant="primary" size="md" onClick={acceptAll}>
                     <Check size={14} />
                     Accept all
                   </Button>
