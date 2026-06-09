@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import * as React from 'react'
 import { motion } from 'motion/react'
-import { Sparkles, Search, Bell, Download, Wand2, type LucideIcon } from 'lucide-react'
+import { Sparkles, Search, Bell, Wand2, type LucideIcon } from 'lucide-react'
 import { Badge, Button, cn } from '@/components/ui/base'
 import { UserMenu } from '@/components/auth/user-menu'
 
@@ -159,12 +159,10 @@ export const TABS: TabDef[] = [
 export interface TopNavProps {
   active: TabKey
   onChange: (key: TabKey) => void
-  onExport?: () => void
   onOpenAuth?: () => void
 }
 
-export const AppTopNav: React.FC<TopNavProps> = ({ active, onChange, onExport, onOpenAuth }) => {
-  const activeTab = TABS.find((t) => t.key === active) ?? TABS[0]
+export const AppTopNav: React.FC<TopNavProps> = ({ active, onChange, onOpenAuth }) => {
 
   return (
     <header className="sticky top-0 z-30 bg-canvas/85 backdrop-blur-xl border-b border-line">
@@ -183,13 +181,6 @@ export const AppTopNav: React.FC<TopNavProps> = ({ active, onChange, onExport, o
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          {onExport && (
-            <Button variant="secondary" size="sm" onClick={onExport}>
-              <Download size={14} />
-              Export
-            </Button>
-          )}
-
           <UserMenu onOpenAuth={() => onOpenAuth?.()} />
         </div>
       </div>

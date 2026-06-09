@@ -174,7 +174,30 @@ export const ResumeForm: React.FC = () => {
               <div className="space-y-2">
                 {exp.bullets.map((b, i) => (
                   <div key={i} className="flex gap-2">
-                    <span className="mt-2.5 text-ink-subtle"><GripVertical size={12} /></span>
+                    <div className="flex flex-col gap-0.5 mt-1.5">
+                      <button
+                        onClick={() => {
+                          if (i === 0) return;
+                          const next = [...exp.bullets];
+                          [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                          updateExperience(exp.id, { bullets: next });
+                        }}
+                        className="h-4 w-4 rounded flex items-center justify-center text-ink-subtle hover:text-ink hover:bg-white/5 disabled:opacity-20"
+                        aria-label="Move bullet up"
+                        disabled={i === 0}
+                      >▲</button>
+                      <button
+                        onClick={() => {
+                          if (i === exp.bullets.length - 1) return;
+                          const next = [...exp.bullets];
+                          [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                          updateExperience(exp.id, { bullets: next });
+                        }}
+                        className="h-4 w-4 rounded flex items-center justify-center text-ink-subtle hover:text-ink hover:bg-white/5 disabled:opacity-20"
+                        aria-label="Move bullet down"
+                        disabled={i === exp.bullets.length - 1}
+                      >▼</button>
+                    </div>
                     <textarea
                       value={b}
                       onChange={(e) => {

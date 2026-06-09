@@ -4,7 +4,7 @@ import * as React from "react";
 import { motion } from "motion/react";
 import {
   Upload, FileText, AlertCircle, AlertTriangle, CheckCircle2, X, Sparkles, Lightbulb,
-  Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight, ArrowLeft, Download,
+  Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight, ArrowLeft,
   FileSignature, Wand2, Check, Briefcase,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
@@ -434,21 +434,21 @@ export const CheckView: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {report.overall < 70 && (
+            {report.overall >= 70 ? (
+              <Button variant="primary" size="md" onClick={() =>
+                window.dispatchEvent(new CustomEvent("resumeelevate:navigate", { detail: { tab: "builder" } }))
+              }>
+                <ArrowRight size={14} /> Go to Builder & Download
+              </Button>
+            ) : (
               <Button variant="secondary" size="md" onClick={() => {
-                // Switch to the base resume + navigate user to Tailor with the same JD pre-filled
                 setActiveVersion(BASE_VERSION);
-                // Use sessionStorage so the Tailor tab can read the JD
-                if (jdActive && jdDraft) sessionStorage.setItem("resumeelevate.tailor.jd", jdDraft);
-                // Trigger tab change via a custom event
+                if (jdActive && jdDraft) localStorage.setItem("resumeelevate.jd.v1", JSON.stringify({ jd: jdDraft, company: "", role: "" }));
                 window.dispatchEvent(new CustomEvent("resumeelevate:navigate", { detail: { tab: "tailor" } }));
               }}>
                 <ArrowLeft size={14} /> Go back to Tailor
               </Button>
             )}
-            <span className="text-2xs text-ink-subtle flex items-center gap-1">
-              <Download size={11} /> PDF export — next patch
-            </span>
           </div>
         </div>
       </Card>

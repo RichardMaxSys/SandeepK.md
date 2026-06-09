@@ -143,7 +143,8 @@ export const TailorView: React.FC = () => {
   const [generatingLetter, setGeneratingLetter] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
-  /* ── Error state ────────────────────────────────────────────────────── */
+  /* ── LinkedIn notify ──────────────────────────────────────────────── */
+  const [notifyLinkedIn, setNotifyLinkedIn] = React.useState<boolean | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   /* ────────────────────────────────────────────────────────────────────── */
@@ -413,7 +414,7 @@ export const TailorView: React.FC = () => {
       await generatePdf({
         resume: savedVersion.data,
         template: defaultTemplate,
-        watermark: true,
+        watermark: !isPro,
       });
     } catch {
       // error handled by usePdfExport's onError
@@ -488,6 +489,19 @@ export const TailorView: React.FC = () => {
     await navigator.clipboard.writeText(coverLetter);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const downloadCoverLetter = () => {
+    if (!coverLetter) return;
+    const blob = new Blob([coverLetter], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cover-letter-${company || "company"}-${role || "role"}.txt`.replace(/[^a-z0-9.-]/gi, "-").toLowerCase();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const fillSample = () => {
@@ -1064,7 +1078,7 @@ export const TailorView: React.FC = () => {
                 <Button variant="secondary" size="sm" onClick={copyLetter}>
                   <Copy size={14} /> {copied ? "Copied!" : "Copy"}
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={downloadCoverLetter}>
                   <Download size={14} /> Download
                 </Button>
               </>
@@ -1110,7 +1124,9 @@ export const TailorView: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="secondary" size="md"><Bell size={14} /> Notify me</Button>
+            <Button variant="secondary" size="md" onClick={() => setNotifyLinkedIn(true)} disabled={notifyLinkedIn === true}>
+              <Bell size={14} /> {notifyLinkedIn === true ? "Notified ✓" : "Notify me"}
+            </Button>
           </div>
         </div>
       </Card>

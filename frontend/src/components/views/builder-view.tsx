@@ -110,28 +110,45 @@ export const BuilderView: React.FC = () => {
     }
   };
 
-  // Category alias map: legacy builder labels → new catalog category values
-  const CATEGORY_ALIAS: Record<string, string[]> = {
-    minimal: ["minimal", "minimalist"],
-    modern: ["modern"],
-    classic: ["professional", "classic"],
-    creative: ["creative"],
-    executive: ["executive"],
-    technical: ["tech", "technical"],
-  };
+  // Derive unique category buttons from the actual template catalog
+  const categories = React.useMemo(() => {
+    const seen = new Set<string>();
+    const cats: string[] = ["all"];
+    // Sort: group-like categories adjacent, "Designer" next to "Creative", etc.
+    const GROUP_ORDER = [
+      "Minimal", "Modern", "Classic",
+      "Professional", "Executive",
+      "Creative", "Designer",
+      "Technical", "Software / AI / Data", "Tech / Developer", "Engineering",
+      "Business / Consulting", "Finance",
+      "Healthcare", "Education",
+      "Legal",
+      "Sales / Marketing", "Customer Service",
+      "Student / Entry Level", "Career Change",
+      "Hospitality", "Freelancer / Portfolio Style",
+    ];
+    const rawCats = new Set(TEMPLATES.map((t) => t.category));
+    for (const g of GROUP_ORDER) {
+      if (rawCats.has(g)) { cats.push(g); seen.add(g); }
+    }
+    // Any category not in GROUP_ORDER goes at the end
+    for (const c of rawCats) { if (!seen.has(c)) cats.push(c); }
+    return cats;
+  }, []);
 
   const filtered = React.useMemo(() => {
     return TEMPLATES.filter((t) => {
-      if (cat !== "all") {
-        const aliases = CATEGORY_ALIAS[cat] ?? [cat];
-        if (!aliases.includes(t.category.toLowerCase())) return false;
+      if (cat !== "all" && t.category !== cat) return false;
+      if (query) {
+        const q = query.toLowerCase().trim();
+        // Token-based search: all query tokens must match across name/tagline/category
+        const tokens = q.split(/\s+/).filter(Boolean);
+        const searchTarget = `${t.name} ${t.tagline} ${t.category}`.toLowerCase();
+        return tokens.every((token) => searchTarget.includes(token));
       }
-      if (query && !t.name.toLowerCase().includes(query.toLowerCase()) && !t.tagline.toLowerCase().includes(query.toLowerCase())) return false;
       return true;
     });
   }, [query, cat]);
-
-  const categories = ["all", "minimal", "modern", "classic", "creative", "executive", "technical"];
 
   return (
     <div className="space-y-6">
