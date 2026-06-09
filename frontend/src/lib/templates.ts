@@ -69,6 +69,13 @@ export interface TemplateDef {
     font: 'sans' | 'serif' | 'mono'
   }
   atsRiskNote?: string
+  /** @added competitor-research — ATS safety rating from the catalog */
+  atsRating?: 'High' | 'Medium' | 'Low'
+  /** @added competitor-research — short audience description, e.g. "Backend & platform engineers" */
+  targetUser?: string
+  /** @added competitor-research — raw tag array for filtering */
+  tags?: string[]
+  premiumRating?: number
 }
 
 /* -------------------------------------------------------------------------- */
@@ -189,6 +196,10 @@ function templateToTemplateDef(t: Template): TemplateDef {
       font,
     },
     atsRiskNote,
+    atsRating: t.atsRating,
+    targetUser: t.targetUser,
+    tags: t.tags,
+    premiumRating: t.premiumRating,
   }
 }
 
@@ -345,4 +356,55 @@ export function accentSolid(accent: TemplateDef['style']['accent']): string {
     mono: 'bg-white',
   }
   return map[accent] ?? map.teal
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Industry / role filter — derived from template targetUser field           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Broad industry/role buckets for template filtering.
+ * Each key is a human-readable group label; the values are keyword patterns
+ * matched against the template's `targetUser` field.
+ * @added competitor-research
+ */
+const INDUSTRY_BUCKETS: Record<string, string[]> = {
+  'Tech / Engineering':     ['engineer', 'developer', 'devops', 'sre', 'backend', 'frontend', 'full-stack', 'mobile', 'platform', 'qa', 'cyber', 'security', 'embedded', 'hardware', 'architect', 'software'],
+  'Data / AI':             ['data', 'ai ', 'ml ', 'analytics', 'analyst', 'science', 'scientist', 'deep learning', 'machine learning', 'bioinformatics'],
+  'Design / Creative':     ['design', 'creative', 'art', 'visual', 'ux', 'ui', 'motion', '3d', 'illustrator', 'multimedia', 'brand', 'studio'],
+  'Product / Program':     ['product manager', 'product designer', 'program manager', 'pm '],
+  'Sales / Marketing':     ['sales', 'marketing', 'growth', 'comms', 'social media', 'account management', 'bd ', 'content', 'copy', 'campaign', 'brand'],
+  'Business / Consulting': ['consult', 'business', 'strategy', 'corporate', 'management'],
+  'Finance / Legal':       ['finance', 'legal', 'law', 'attorney', 'account', 'audit', 'compliance', 'banking', 'insurance', 'treasury', 'investment'],
+  'Healthcare':            ['health', 'nurse', 'pharmac', 'medical', 'clinician', 'hospital', 'doctor', 'physician', 'care'],
+  'Education / Research':  ['academic', 'teacher', 'educator', 'professor', 'researcher', 'school', 'student', 'education'],
+  'Operations / Support':  ['operation', 'support', 'supply chain', 'logistics', 'customer success', 'facility'],
+  'Executive / Leadership':['executive', 'c-suite', 'vp ', 'director', 'ceo', 'cto', 'cio', 'cfo', 'founder', 'board', 'senior executive', 'general manager', 'managing director'],
+  'Entry Level':           ['entry', 'junior', 'intern', 'new grad', 'career switcher', 'early-career', 'recent grad'],
+}
+
+/** Group of bucket label + its display name — used for the filter chip row. */
+export interface IndustryBucket {
+  key: string
+  label: string
+}
+
+export const INDUSTRY_GROUPS: IndustryBucket[] = Object.keys(INDUSTRY_BUCKETS).map((label) => ({
+  key: label.toLowerCase().replace(/[^a-z]+/g, '-'),
+  label,
+}))
+
+/**
+ * Returns true if the template's targetUser matches the given industry bucket.
+ * Matches by checking if any keyword pattern from the bucket appears in the
+ * targetUser string (case-insensitive).
+ */
+export function templateMatchesIndustry(t: TemplateDef, bucketKey: string): boolean {
+  if (bucketKey === 'all') return true
+  const entry = INDUSTRY_GROUPS.find((g) => g.key === bucketKey)
+  if (!entry || !t.targetUser) return false
+  const keywords = INDUSTRY_BUCKETS[entry.label]
+  if (!keywords) return false
+  const lower = t.targetUser.toLowerCase()
+  return keywords.some((kw) => lower.includes(kw))
 }

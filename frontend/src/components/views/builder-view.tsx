@@ -6,6 +6,7 @@ import { Search, Download, FileText, Eye, Edit3, Sparkles, X, CheckCircle2, Lock
 import { Button, Card, Badge, cn } from "@/components/ui/base";
 import { WeightedBreakdown } from "@/components/ui/weighted-breakdown";
 import { TemplateCard, TEMPLATES } from "@/components/builder/template-card";
+import { INDUSTRY_GROUPS, templateMatchesIndustry } from "@/lib/templates";
 import { ResumeForm } from "@/components/builder/resume-form";
 import { VersionSelector } from "@/components/version-selector";
 import { useResume } from "@/lib/resume-store";
@@ -25,6 +26,7 @@ export const BuilderView: React.FC = () => {
   const [mode, setMode] = React.useState<"edit" | "preview">("edit");
   const [query, setQuery] = React.useState("");
   const [cat, setCat] = React.useState<string>("all");
+  const [industryCat, setIndustryCat] = React.useState<string>("all");
   const [pdfToast, setPdfToast] = React.useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [quotaTick, setQuotaTick] = React.useState(0); // forces re-read of usage on action
   const [mounted, setMounted] = React.useState(false);
@@ -141,6 +143,7 @@ export const BuilderView: React.FC = () => {
   const filtered = React.useMemo(() => {
     return TEMPLATES.filter((t) => {
       if (cat !== "all" && t.category !== cat) return false;
+      if (industryCat !== "all" && !templateMatchesIndustry(t, industryCat)) return false;
       if (query) {
         const q = query.toLowerCase().trim();
         // Token-based search: all query tokens must match across name/tagline/category
@@ -150,7 +153,7 @@ export const BuilderView: React.FC = () => {
       }
       return true;
     });
-  }, [query, cat]);
+  }, [query, cat, industryCat]);
 
   return (
     <div className="space-y-6">
@@ -239,6 +242,25 @@ export const BuilderView: React.FC = () => {
         </div>
       </div>
 
+      {/* Workflow steps — added from competitor research */}
+      <div className="flex items-center gap-2 text-2xs text-ink-subtle px-1 -mb-3">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-4 w-4 rounded-full bg-accent-500/15 text-accent-300 flex items-center justify-center text-[9px] font-semibold">1</span>
+          Pick a template
+        </span>
+        <span className="text-line-strong">→</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-4 w-4 rounded-full bg-white/5 text-ink-muted flex items-center justify-center text-[9px] font-semibold">2</span>
+          Edit content
+        </span>
+        <span className="text-line-strong">→</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-4 w-4 rounded-full bg-white/5 text-ink-muted flex items-center justify-center text-[9px] font-semibold">3</span>
+          Export PDF / DOCX
+        </span>
+        <span className="ml-auto text-ink-subtle">ATS score updates as you type</span>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr_420px] gap-5">
         {/* LEFT: Template gallery */}
         <aside className="space-y-3">
@@ -266,8 +288,35 @@ export const BuilderView: React.FC = () => {
                 </button>
               ))}
             </div>
+            {/* Industry / role filter — added from competitor research */}
+            {industryCat && (
+              <div className="mt-2 pt-2 border-t border-line flex flex-wrap gap-1">
+                <span className="text-2xs text-ink-subtle mr-1 self-center">Role:</span>
+                <button
+                  onClick={() => setIndustryCat("all")}
+                  className={cn(
+                    "text-2xs font-medium px-2 py-0.5 rounded-md transition-colors",
+                    industryCat === "all" ? "bg-accent-500/15 text-accent-300" : "text-ink-muted hover:text-ink hover:bg-white/5",
+                  )}
+                >
+                  All roles
+                </button>
+                {INDUSTRY_GROUPS.map((g) => (
+                  <button
+                    key={g.key}
+                    onClick={() => setIndustryCat(g.key)}
+                    className={cn(
+                      "text-2xs font-medium px-2 py-0.5 rounded-md transition-colors",
+                      industryCat === g.key ? "bg-accent-500/15 text-accent-300" : "text-ink-muted hover:text-ink hover:bg-white/5",
+                    )}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-2 text-2xs text-ink-subtle">
-              {TEMPLATES.length} templates
+              {filtered.length} of {TEMPLATES.length} templates
             </div>
           </Card>
 

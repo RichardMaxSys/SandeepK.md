@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Lock, Check, Sparkles } from "lucide-react";
+import { Lock, Check, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { cn } from "@/components/ui/base";
 import { TEMPLATES, accentGradient, accentSolid, type TemplateDef } from "@/lib/templates";
 
@@ -15,7 +15,7 @@ export const TemplateCard: React.FC<{
     <button
       onClick={onSelect}
       className={cn(
-        "group relative text-left rounded-2xl border bg-canvas-raised overflow-hidden transition-all",
+        "group relative text-left rounded-2xl border bg-canvas-raised overflow-hidden transition-all w-full",
         active
           ? "border-accent-500/50 shadow-glow-accent"
           : "border-line hover:border-line-strong hover:bg-[#1a2238]",
@@ -31,10 +31,30 @@ export const TemplateCard: React.FC<{
           </div>
         )}
 
+        {/* Tier badge */}
         {t.tier === "pro" && (
           <div className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-canvas/85 border border-amber-500/30 text-2xs font-semibold text-amber-300 backdrop-blur">
             <Sparkles size={9} />
             Pro
+          </div>
+        )}
+
+        {/* ATS badge */}
+        {t.atsRating && (
+          <div className={cn(
+            "absolute bottom-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md backdrop-blur",
+            t.atsRating === "High"
+              ? "bg-success/20 border border-success/30 text-success"
+              : t.atsRating === "Medium"
+                ? "bg-amber-500/20 border border-amber-500/30 text-amber-300"
+                : "bg-rose-500/20 border border-rose-500/30 text-rose-300",
+          )}>
+            {t.atsRating === "High" ? (
+              <ShieldCheck size={9} />
+            ) : (
+              <AlertTriangle size={9} />
+            )}
+            <span className="text-2xs font-semibold">ATS {t.atsRating}</span>
           </div>
         )}
       </div>
@@ -44,7 +64,15 @@ export const TemplateCard: React.FC<{
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-ink truncate">{t.name}</p>
         </div>
-        <p className="text-2xs text-ink-subtle capitalize mt-0.5">{t.category}</p>
+        <p className="text-2xs text-ink-muted capitalize mt-0.5 flex items-center gap-1.5">
+          <span>{t.category}</span>
+          {t.targetUser && (
+            <>
+              <span className="text-line-strong">·</span>
+              <span className="truncate">{t.targetUser}</span>
+            </>
+          )}
+        </p>
       </div>
     </button>
   );

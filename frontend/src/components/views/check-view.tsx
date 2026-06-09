@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import {
   Upload, FileText, AlertCircle, AlertTriangle, CheckCircle2, X, Sparkles, Lightbulb,
   Mail, Phone, MapPin, ListChecks, TrendingUp, Info, ArrowRight, ArrowLeft,
-  FileSignature, Wand2, Check, Briefcase,
+  FileSignature, Wand2, Check, Briefcase, ChevronDown,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
 import { WeightedBreakdown } from "@/components/ui/weighted-breakdown";
@@ -76,28 +76,54 @@ export const CheckView: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /** Map dimension labels to their weight for impact scoring */
+  const DIM_WEIGHT: Record<string, number> = {
+    'Parseability': 0.30,
+    'Keyword Match': 0.25, 'Keyword Coverage': 0.25,
+    'Content Quality': 0.25,
+    'Formatting Hygiene': 0.20,
+  };
+
+  interface FindingRow {
+    dimension: string;
+    severity: "high" | "medium" | "low";
+    impact: "high" | "medium" | "low";
+    message: string;
+    actionable: boolean;
+  }
+
   const allIssues = React.useMemo(() => {
-    const out: { dimension: string; severity: "high" | "medium" | "low"; message: string }[] = [];
+    const out: FindingRow[] = [];
     for (const d of Object.values(report.dimensions)) {
+      const weight = DIM_WEIGHT[d.label] ?? 0.20;
+      const impact: "high" | "medium" | "low" = weight >= 0.25 ? "high" : "medium";
       for (const f of d.findings) {
-        out.push({ dimension: d.label, severity: f.includes("very") || f.includes("No ") || f.includes("Missing") ? "high" : "medium", message: f });
+        const severity = f.includes("very") || f.includes("No ") || f.includes("Missing") || f.includes("low match") ? "high" : "medium";
+        out.push({ dimension: d.label, severity, impact, message: f, actionable: !f.includes("generic") });
       }
     }
+    // Sort: high impact first, then high severity first, then dimension weight descending
+    const order = { high: 0, medium: 1, low: 2 };
+    out.sort((a, b) => order[a.impact] - order[b.impact] || order[a.severity] - order[b.severity]);
     return out;
   }, [report]);
 
-  const suggestionFor = (msg: string): string | null => {
-    if (msg.includes("Missing") && msg.includes("keywords")) return "Paste this JD in the Tailor tab to add missing keywords.";
-    if (msg.toLowerCase().includes("generic phrase") || msg.toLowerCase().includes("generic")) return "Replace with a concrete achievement in the Build tab.";
-    if (msg.includes("weak verb")) return "Swap for action verbs: Built, Led, Reduced, Drove, Launched.";
-    if (msg.includes("number") || msg.includes("quantified") || msg.includes("% of bullet")) return "Add a metric: users, revenue, % improvement, or time saved.";
-    if (msg.includes("Missing email")) return "Add your email in the Build tab contact section.";
-    if (msg.includes("Missing")) return "Add the missing section in the Build tab.";
-    if (msg.includes("No experience")) return "Add work experience in the Build tab first.";
-    if (msg.includes("No education")) return "Add your education in the Build tab.";
-    if (msg.includes("short")) return "Expand with more detail to strengthen this section.";
-    if (msg.includes("long") || msg.includes("dense")) return "Condense to 1-2 lines per bullet for readability.";
+  const suggestionFor = (msg: string): { tip: string; tab?: "builder" | "tailor" } | null => {
+    if (msg.includes("Missing") && msg.includes("keywords")) return { tip: "Paste this JD in the Tailor tab to add missing keywords.", tab: "tailor" };
+    if (msg.toLowerCase().includes("generic phrase") || msg.toLowerCase().includes("generic")) return { tip: "Replace with a concrete achievement in the Build tab.", tab: "builder" };
+    if (msg.includes("weak verb")) return { tip: "Swap for action verbs: Built, Led, Reduced, Drove, Launched.", tab: "builder" };
+    if (msg.includes("number") || msg.includes("quantified") || msg.includes("% of bullet")) return { tip: "Add a metric: users, revenue, % improvement, or time saved.", tab: "builder" };
+    if (msg.includes("Missing email")) return { tip: "Add your email in the contact section.", tab: "builder" };
+    if (msg.includes("Missing")) return { tip: "Add the missing section in the Build tab.", tab: "builder" };
+    if (msg.includes("No experience")) return { tip: "Add work experience in the Build tab first.", tab: "builder" };
+    if (msg.includes("No education")) return { tip: "Add your education in the Build tab.", tab: "builder" };
+    if (msg.includes("short")) return { tip: "Expand with more detail to strengthen this section.", tab: "builder" };
+    if (msg.includes("long") || msg.includes("dense")) return { tip: "Condense to 1-2 lines per bullet for readability.", tab: "builder" };
     return null;
+  };
+
+  const navigateTo = (tab: "builder" | "tailor") => {
+    window.dispatchEvent(new CustomEvent("resumeelevate:navigate", { detail: { tab } }));
   };
 
   return (
@@ -114,6 +140,9 @@ export const CheckView: React.FC = () => {
         </div>
         <VersionSelector />
       </div>
+
+      {/* ── How this works panel — added competitor-research ────────── */}
+      <AtsExplanationPanel />
 
       {/* Base comparison + version info */}
       {isTailored && baseReport && (
@@ -285,7 +314,7 @@ export const CheckView: React.FC = () => {
               <div>
                 <h2 className="text-base font-semibold text-ink">What to fix</h2>
                 <p className="text-2xs text-ink-muted mt-0.5">
-                  {allIssues.length} issue{allIssues.length === 1 ? "" : "s"} — sorted by severity
+                  {allIssues.length} issue{allIssues.length === 1 ? "" : "s"} — sorted by impact
                 </p>
               </div>
               <Badge tone={allIssues.length === 0 ? "success" : "warning"}>
@@ -322,15 +351,31 @@ export const CheckView: React.FC = () => {
                        <Info size={12} />}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-ink leading-snug">{it.message}</p>
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm text-ink leading-snug flex-1">{it.message}</p>
+                        <span className={cn(
+                          "text-2xs font-medium px-1.5 py-0.5 rounded shrink-0",
+                          it.impact === "high" ? "bg-danger/[0.08] text-danger border border-danger/20" : "bg-amber-500/[0.08] text-amber-300 border border-amber-500/20",
+                        )}>{it.impact === "high" ? "High" : "Medium"}</span>
+                      </div>
                       <p className="text-2xs text-ink-subtle mt-1">{it.dimension}</p>
                       {(() => {
                         const tip = suggestionFor(it.message);
                         return tip ? (
-                          <p className="text-2xs text-accent-300 mt-1.5 flex items-center gap-1">
-                            <ArrowRight size={10} className="shrink-0" />
-                            {tip}
-                          </p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-2xs text-accent-300 flex items-center gap-1">
+                              <ArrowRight size={10} className="shrink-0" />
+                              {tip.tip}
+                            </span>
+                            {tip.tab && (
+                              <button
+                                onClick={() => navigateTo(tip.tab!)}
+                                className="text-2xs font-medium text-accent-300 hover:text-accent-200 underline"
+                              >
+                                Open {tip.tab === "builder" ? "Builder" : "Tailor"} →
+                              </button>
+                            )}
+                          </div>
                         ) : null;
                       })()}
                     </div>
@@ -453,6 +498,62 @@ export const CheckView: React.FC = () => {
         </div>
       </Card>
     </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                          ATS Explanation Panel                              */
+/* -------------------------------------------------------------------------- */
+
+const DIMENSION_DEFS = [
+  { key: 'parseability', label: 'Parseability', weight: '30%', icon: '📄', desc: 'How cleanly an ATS can extract your name, contact info, work history, and education. Missing fields block you before any human reads your resume.' },
+  { key: 'keywords', label: 'Keyword Match', weight: '25%', icon: '🔑', desc: 'Whether your resume includes the same technical terms, tools, and skills the job description uses. This is the single biggest lever for ATS pass-through.' },
+  { key: 'content', label: 'Content Quality', weight: '25%', icon: '✍️', desc: 'Bullets with quantified impact, action verbs, and specific accomplishments. ATS systems score this to surface candidates who deliver results.' },
+  { key: 'formatting', label: 'Formatting Hygiene', weight: '20%', icon: '📐', desc: 'Section ordering, bullet structure, date completeness, and skill list length. ATS parsers expect a predictable document structure.' },
+];
+
+const AtsExplanationPanel: React.FC = () => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Card className="p-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 w-full text-left text-sm font-medium text-ink"
+      >
+        <span className="h-6 w-6 rounded-md bg-accent-500/15 border border-accent-500/30 flex items-center justify-center shrink-0">
+          <Sparkles size={12} className="text-accent-300" />
+        </span>
+        <span className="flex-1">How the ATS score works</span>
+        <span className="text-2xs text-ink-subtle">{open ? 'Hide' : 'Show details'}</span>
+        <span className={cn("transition-transform", open && "rotate-180")}>
+          <ChevronDown size={12} className="text-ink-subtle" />
+        </span>
+      </button>
+      {open && (
+        <div className="mt-4 pt-4 border-t border-line space-y-4">
+          <p className="text-xs text-ink-muted leading-relaxed">
+            The overall score is a weighted composite of four independent dimensions. Each dimension
+            measures a specific signal that real ATS parsers (Workday, Greenhouse, Lever) use to score
+            and rank resumes. We don't claim to know any company's proprietary algorithm — we measure
+            the <span className="text-ink font-medium">proxies that correlate with them</span>.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {DIMENSION_DEFS.map((d) => (
+              <div key={d.key} className="rounded-xl border border-line bg-canvas-subtle p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold text-ink">{d.label}</span>
+                  <span className="text-2xs font-mono text-accent-300 font-semibold">{d.weight}</span>
+                </div>
+                <p className="text-2xs text-ink-muted leading-relaxed">{d.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-2xs text-ink-muted italic">
+            Not a real ATS. Every score includes what we checked for, what we found, and exactly what to fix.
+          </p>
+        </div>
+      )}
+    </Card>
   );
 };
 

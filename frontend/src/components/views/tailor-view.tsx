@@ -74,6 +74,21 @@ interface BulletMeta {
   bulletIndex: number;
 }
 
+/* ── Step constants + JD auto-extract helper ── added competitor-research */
+const STEP_JD = 1, STEP_KEYWORDS = 2, STEP_REWRITE = 3, STEP_SAVED = 4;
+
+function extractFromJd(text: string): { role: string; company: string } {
+  const firstLine = text.split('\n')[0]?.trim() || '';
+  const dashMatch = firstLine.match(/^(.+?)\s*[—–-]\s*([A-Za-z0-9\s&.]+?)(?:,|\s|$)/);
+  if (dashMatch) return { role: dashMatch[1].trim(), company: dashMatch[2].trim() };
+  const atMatch = firstLine.match(/^(.+?)\s+at\s+([A-Za-z0-9\s&.]+?)(?:,|\s|$)/);
+  if (atMatch) return { role: atMatch[1].trim(), company: atMatch[2].trim() };
+  const secondLine = text.split('\n')[1]?.trim() || '';
+  const secondAt = secondLine.match(/^(.+?)\s+at\s+([A-Za-z0-9\s&.]+?)(?:,|\s|$)/);
+  if (secondAt) return { role: secondAt[1].trim(), company: secondAt[2].trim() };
+  return { role: '', company: '' };
+}
+
 /* -------------------------------------------------------------------------- */
 /*                              Main component                                */
 /* -------------------------------------------------------------------------- */
@@ -134,8 +149,7 @@ export const TailorView: React.FC = () => {
     },
   });
 
-  /* ── ATS check ──────────────────────────────────────────────────────── */
-  const [atsLoading, setAtsLoading] = React.useState(false);
+const [atsLoading, setAtsLoading] = React.useState(false);
   const [atsResult, setAtsResult] = React.useState<any>(null);
 
   /* ── Cover letter ───────────────────────────────────────────────────── */
@@ -180,6 +194,18 @@ export const TailorView: React.FC = () => {
 
   const sourceVersion = versions[sourceVersionId] ?? versions[BASE_VERSION];
   const sourceResume = sourceVersion.data;
+
+  /* ── JD paste handler with auto-extract ──────────────────────────── */
+  const handleJdChange = (value: string) => {
+    setJd(value);
+    if (!value.trim()) return;
+    // Only auto-extract if role/company are still empty
+    if (!role && !company) {
+      const extracted = extractFromJd(value);
+      if (extracted.role) setRole(extracted.role);
+      if (extracted.company) setCompany(extracted.company);
+    }
+  };
 
   /* ────────────────────────────────────────────────────────────────────── */
   /*                          Handler functions                             */
@@ -534,6 +560,15 @@ export const TailorView: React.FC = () => {
 
   const hasRewrites = rewriteResults.length > 0;
 
+  /* ── Step tracking — added competitor-research ──────────────────────── */
+  const currentStep = React.useMemo(() => {
+    if (!jd.trim()) return STEP_JD;
+    if (!analysis && !hasRewrites) return STEP_KEYWORDS;
+    if (!hasRewrites) return STEP_KEYWORDS;
+    if (!savedVersionId) return STEP_REWRITE;
+    return STEP_SAVED;
+  }, [jd, analysis, hasRewrites, savedVersionId]);
+
   /* ── Live preview of assembled resume with accepted changes ─────────── */
   const [showPreview, setShowPreview] = React.useState(false);
 
@@ -610,6 +645,23 @@ export const TailorView: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Workflow steps — added competitor-research ───────────────────── */}
+      <div className="flex items-center gap-2 text-2xs text-ink-subtle px-1">
+        <StepCircle n={1} active={currentStep >= STEP_JD} label="Paste JD" />
+        <StepArrow />
+        <StepCircle n={2} active={currentStep >= STEP_KEYWORDS} label="Review keywords" />
+        <StepArrow />
+        <StepCircle n={3} active={currentStep >= STEP_REWRITE} label="Accept / Reject rewrites" />
+        <StepArrow />
+        <StepCircle n={4} active={currentStep >= STEP_SAVED} label="Save & Export" />
+        <span className="ml-auto text-ink-subtle">
+          {currentStep === STEP_JD ? 'Start by pasting a job description' :
+           currentStep === STEP_KEYWORDS ? 'Analyze to see keyword gaps' :
+           currentStep === STEP_REWRITE ? 'Review AI rewrites' :
+           'All done'}
+        </span>
+      </div>
+
       {/* ── Step 1: Source + JD input ──────────────────────────────────── */}
       <Card className="p-5">
         <div className="mb-4 flex items-center gap-3">
@@ -637,7 +689,7 @@ export const TailorView: React.FC = () => {
             <span className="block text-2xs font-medium uppercase tracking-wider text-ink-subtle mb-1.5">Job description</span>
             <textarea
               value={jd}
-              onChange={(e) => setJd(e.target.value)}
+              onChange={(e) => handleJdChange(e.target.value)}
               rows={6}
               placeholder="Paste the full job description here…"
               className="w-full h-32 px-3 py-2 rounded-lg bg-canvas-subtle border border-line text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-2 focus:ring-accent-500/40 focus:border-accent-500/40 transition-all leading-relaxed resize-y"
@@ -787,6 +839,15 @@ export const TailorView: React.FC = () => {
                     {totalCount} bullet{totalCount !== 1 ? "s" : ""} · {decidedCount}/{totalCount} reviewed
                     {allDecided && " · all reviewed"}
                   </p>
+                  {/* Progress bar — added competitor-research */}
+                  {totalCount > 0 && (
+                    <div className="mt-2 h-1 rounded-full bg-white/[0.06] overflow-hidden max-w-[200px]">
+                      <div
+                        className="h-full rounded-full bg-accent-500 transition-all duration-300"
+                        style={{ width: `${Math.round((decidedCount / totalCount) * 100)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {previewData && (
@@ -1142,6 +1203,25 @@ export const TailorView: React.FC = () => {
     </div>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+/*                       Step indicator subcomponents                         */
+/* -------------------------------------------------------------------------- */
+
+const StepCircle: React.FC<{ n: number; active: boolean; label: string }> = ({ n, active, label }) => (
+  <span className={cn(
+    "inline-flex items-center gap-1.5",
+    active ? "text-ink" : "text-ink-subtle",
+  )}>
+    <span className={cn(
+      "h-4 w-4 rounded-full flex items-center justify-center text-[9px] font-semibold transition-colors",
+      active ? "bg-accent-500/15 text-accent-300" : "bg-white/5 text-ink-muted",
+    )}>{n}</span>
+    <span className="hidden sm:inline">{label}</span>
+  </span>
+);
+
+const StepArrow: React.FC = () => <span className="text-line-strong text-2xs">→</span>;
 
 /* -------------------------------------------------------------------------- */
 /*                     Live Tailored Resume Preview                           */
