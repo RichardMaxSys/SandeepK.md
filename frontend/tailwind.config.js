@@ -85,11 +85,16 @@ module.exports = {
           '0%, 100%': { opacity: '1' },
           '50%':      { opacity: '0.6' },
         },
+        'spotlight': {
+          '0%': { opacity: '0', transform: 'translate(-72%, -62%) scale(0.5)' },
+          '100%': { opacity: '1', transform: 'translate(-50%, -40%) scale(1)' },
+        },
       },
       animation: {
         'fade-in':    'fade-in 0.3s ease-out',
         'shimmer':    'shimmer 2s linear infinite',
         'pulse-soft': 'pulse-soft 2.4s ease-in-out infinite',
+        'spotlight':  'spotlight 2s ease 0.75s 1 forwards',
       },
     },
   },

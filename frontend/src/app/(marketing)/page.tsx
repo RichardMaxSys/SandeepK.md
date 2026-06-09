@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import type { Variants } from "motion/react";
 import { Button, Card, cn } from "@/components/ui/base";
+import { SplineSceneBasic } from "@/components/ui/demo";
 
 /* -------------------------------------------------------------------------- */
 /*  Marketing landing page — /                                                */
@@ -425,6 +426,9 @@ export default function MarketingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* ---- SPLINE 3D SHOWCASE ---- */}
+      <SplineSceneBasic />
 
       {/* ---- FEATURES: 3 PILLARS ---- */}
       <section
