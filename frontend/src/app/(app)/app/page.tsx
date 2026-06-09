@@ -44,10 +44,24 @@ export default function AppPage() {
 
   return (
     <ResumeProvider>
-      <div className="min-h-screen flex flex-col bg-canvas text-ink">
+      <div className="min-h-screen flex flex-col text-ink relative overflow-hidden bg-canvas">
+        {/* Subtle full-background video layer — decorative only, desktop only */}
+        <div className="hidden md:block absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0 mix-blend-soft-light" aria-hidden="true">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: 0.15 }}
+          >
+            <source src="/videos/demo.mp4" type="video/mp4" />
+          </video>
+        </div>
+
         <AppTopNav active={tab} onChange={setTab} onOpenAuth={() => setAuthOpen(true)} />
 
-        <main className="flex-1">
+        <main className="flex-1 relative z-10">
           <div className="max-w-[1400px] mx-auto p-6 lg:p-8">
             <AnimatePresence mode="wait">
               {tab === "builder" && (
