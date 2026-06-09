@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "motion/react";
 import type { Variants } from "motion/react";
 import { Button, Card, cn } from "@/components/ui/base";
 import { SplineSceneBasic } from "@/components/ui/demo";
+import { CursorGlow, useParallaxOffset } from "@/components/ui/cursor-glow";
 
 /* -------------------------------------------------------------------------- */
 /*  Marketing landing page — /                                                */
@@ -184,8 +185,12 @@ export default function MarketingPage() {
     "monthly"
   );
 
+  const parallax = useParallaxOffset(0.5);
+
   return (
     <div className="min-h-screen bg-canvas text-ink overflow-x-hidden">
+      {/* Cursor-responsive ambient glow */}
+      <CursorGlow />
       {/* ---- STICKY NAV ---- */}
       <motion.nav
         initial={{ y: -20, opacity: 0 }}
@@ -308,7 +313,10 @@ export default function MarketingPage() {
           className="pointer-events-none absolute inset-0 bg-grid-fade"
         />
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
+        <motion.div
+          className="max-w-4xl mx-auto text-center relative z-10"
+          style={{ x: parallax.x, y: parallax.y }}
+        >
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -347,20 +355,28 @@ export default function MarketingPage() {
             transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link href="/app">
-              <Button
-                size="lg"
-                className="rounded-xl text-base px-8 h-12 shadow-glow-accent active:scale-[0.97] active:shadow-none transition-all duration-150"
-              >
-                Start building — free
-              </Button>
-            </Link>
-            <a
+            <motion.div
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              <Link href="/app">
+                <Button
+                  size="lg"
+                  className="rounded-xl text-base px-8 h-12 shadow-glow-accent active:scale-[0.97] active:shadow-none transition-all duration-150"
+                >
+                  Start building — free
+                </Button>
+              </Link>
+            </motion.div>
+            <motion.a
               href="#features"
+              whileHover={{ x: 6 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="text-sm text-ink-muted hover:text-ink active:text-ink transition-colors underline underline-offset-4 decoration-white/20"
             >
               See how it works
-            </a>
+            </motion.a>
           </motion.div>
 
           {/* Mini 3-pillar preview */}
@@ -377,8 +393,11 @@ export default function MarketingPage() {
             ].map((pill, i) => {
               const Icon = pill.icon;
               return (
-                <div key={pill.name} className="flex items-center gap-3 md:gap-6">
-                  <div className="flex items-center gap-2.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <motion.div key={pill.name} className="flex items-center gap-3 md:gap-6"
+                  whileHover={{ y: -2, scale: 1.03 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 18 }}
+                >
+                  <div className="flex items-center gap-2.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-accent-500/10 hover:border-accent-500/30 transition-colors duration-200">
                     <div className="h-6 w-6 rounded-md bg-accent-500/10 flex items-center justify-center">
                       <Icon size={12} className="text-accent-300" />
                     </div>
@@ -399,7 +418,7 @@ export default function MarketingPage() {
                       /
                     </span>
                   )}
-                </div>
+                </motion.div>
               );
             })}
           </motion.div>
@@ -424,10 +443,8 @@ export default function MarketingPage() {
               );
             })}
           </motion.div>
-        </div>
+        </motion.div>
       </section>
-
-      {/* ---- SPLINE 3D SHOWCASE ---- */}
       <SplineSceneBasic />
 
       {/* ---- FEATURES: 3 PILLARS ---- */}
@@ -477,10 +494,10 @@ export default function MarketingPage() {
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  whileHover={{ y: -6, scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <Card className="rounded-xl border-line p-6 sm:p-8 h-full flex flex-col hover:border-accent-500/30 transition-colors duration-200">
+                  <Card className="rounded-xl border-line p-6 sm:p-8 h-full flex flex-col hover:border-accent-500/40 hover:shadow-glow-accent transition-all duration-200">
                     <div className="flex items-start justify-between mb-6">
                       <div className="h-12 w-12 rounded-xl bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
                         <Icon size={22} className="text-accent-300" />
@@ -664,6 +681,8 @@ export default function MarketingPage() {
               <motion.div
                 key={item.label}
                 variants={fadeUp}
+                whileHover={{ y: -3, scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="text-center"
               >
                 <p className="text-2xl font-bold text-ink tracking-tight">
@@ -755,7 +774,11 @@ export default function MarketingPage() {
           >
             {PLANS.map((plan) => (
               <motion.div key={plan.name} variants={fadeUp}>
-                <Card
+                <motion.div
+                  whileHover={{ y: -6, scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <Card
                   className={cn(
                     "rounded-xl p-8 flex flex-col relative border-line",
                     plan.popular && "border-accent-500/40 bg-accent-500/[0.03]"
@@ -811,6 +834,7 @@ export default function MarketingPage() {
                     </Button>
                   </Link>
                 </Card>
+                  </motion.div>
               </motion.div>
             ))}
           </motion.div>
@@ -910,14 +934,20 @@ export default function MarketingPage() {
             application.
           </motion.p>
           <motion.div variants={fadeUp} className="mt-8">
-            <Link href="/app">
-              <Button
-                size="lg"
-                className="rounded-xl text-base px-10 h-12 shadow-glow-accent active:scale-[0.97] active:shadow-none transition-all duration-150"
-              >
-                Start building — free
-              </Button>
-            </Link>
+            <motion.div
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            >
+              <Link href="/app">
+                <Button
+                  size="lg"
+                  className="rounded-xl text-base px-10 h-12 shadow-glow-accent active:scale-[0.97] active:shadow-none transition-all duration-150"
+                >
+                  Start building — free
+                </Button>
+              </Link>
+            </motion.div>
           </motion.div>
         </motion.div>
       </section>
