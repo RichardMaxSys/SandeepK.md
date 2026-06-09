@@ -18,7 +18,6 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import type { Variants } from "motion/react";
 import { Button, Card, cn } from "@/components/ui/base";
-import { SplineSceneBasic } from "@/components/ui/demo";
 import { CursorGlow, useParallaxOffset } from "@/components/ui/cursor-glow";
 
 /* -------------------------------------------------------------------------- */
@@ -188,13 +187,9 @@ export default function MarketingPage() {
   const parallax = useParallaxOffset(0.5);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink overflow-x-hidden relative">
+    <div className="min-h-screen bg-canvas text-ink overflow-x-hidden">
       {/* Cursor-responsive ambient glow */}
       <CursorGlow />
-      {/* Page-spanning transparent Spline scene layer */}
-      <SplineSceneBasic />
-      {/* Content above Spline layer */}
-      <div className="relative z-10">
         {/* ---- STICKY NAV ---- */}
       <motion.nav
         initial={{ y: -20, opacity: 0 }}
@@ -987,7 +982,6 @@ export default function MarketingPage() {
           </div>
         </div>
       </footer>
-      </div>
     </div>
   );
 }
