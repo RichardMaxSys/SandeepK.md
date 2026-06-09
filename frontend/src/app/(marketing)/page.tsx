@@ -188,10 +188,14 @@ export default function MarketingPage() {
   const parallax = useParallaxOffset(0.5);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink overflow-x-hidden">
+    <div className="min-h-screen bg-canvas text-ink overflow-x-hidden relative">
       {/* Cursor-responsive ambient glow */}
       <CursorGlow />
-      {/* ---- STICKY NAV ---- */}
+      {/* Page-spanning transparent Spline scene layer */}
+      <SplineSceneBasic />
+      {/* Content above Spline layer */}
+      <div className="relative z-10">
+        {/* ---- STICKY NAV ---- */}
       <motion.nav
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -445,7 +449,6 @@ export default function MarketingPage() {
           </motion.div>
         </motion.div>
       </section>
-      <SplineSceneBasic />
 
       {/* ---- FEATURES: 3 PILLARS ---- */}
       <section
@@ -984,6 +987,7 @@ export default function MarketingPage() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
