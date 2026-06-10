@@ -4,7 +4,7 @@ import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles, CheckCircle2, AlertTriangle, AlertCircle, Copy, Download,
-  Check, Wand2, FileSignature, Sparkle, Eye, EyeOff,
+  Check, Wand2, FileSignature, Sparkle, Eye, EyeOff, Edit3,
   Linkedin, Bell, ListChecks, Save,
 } from "lucide-react";
 import { Card, Button, Badge, cn } from "@/components/ui/base";
@@ -134,6 +134,10 @@ export const TailorView: React.FC = () => {
   const [acceptedIndices, setAcceptedIndices] = React.useState<Set<number>>(new Set());
   const [rejectedIndices, setRejectedIndices] = React.useState<Set<number>>(new Set());
 
+  /* ── Inline edits on AI suggestions (keyed by suggestion index) ──────── */
+  const [editedTexts, setEditedTexts] = React.useState<Record<number, string>>({});
+  const [editOpenIndices, setEditOpenIndices] = React.useState<Set<number>>(new Set());
+
   /* ── Save state ──────────────────────────────────────────────────────── */
   const [savedVersionId, setSavedVersionId] = React.useState<string | null>(null);
   const [savedToast, setSavedToast] = React.useState<string | null>(null);
@@ -246,6 +250,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
 
     setRewriting(true);
     setRewriteResults([]);
+    setEditedTexts({});
     setAcceptedIndices(new Set());
     setRejectedIndices(new Set());
     setSavedVersionId(null);
@@ -334,6 +339,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
       }
 
       setRewriteResults(results);
+      setEditedTexts(Object.fromEntries(results.map((r, i) => [i, r.after])));
     } catch (err) {
       console.warn("[tailor] LLM rewrite threw, falling back to deterministic", err);
       // Per-item fallback: return originals
@@ -345,6 +351,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
         source: "deterministic" as RewriteSource,
       }));
       setRewriteResults(fallback);
+      setEditedTexts(Object.fromEntries(fallback.map((r, i) => [i, r.after])));
     } finally {
       setRewriting(false);
     }
@@ -357,6 +364,11 @@ const [atsLoading, setAtsLoading] = React.useState(false);
   const acceptBullet = (index: number) => {
     setAcceptedIndices((prev) => new Set(prev).add(index));
     setRejectedIndices((prev) => {
+      const s = new Set(prev);
+      s.delete(index);
+      return s;
+    });
+    setEditOpenIndices((prev) => {
       const s = new Set(prev);
       s.delete(index);
       return s;
@@ -375,6 +387,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
   const acceptAll = () => {
     setAcceptedIndices(new Set(rewriteResults.map((_, i) => i)));
     setRejectedIndices(new Set());
+    setEditOpenIndices(new Set());
   };
   const acceptUndecided = () => {
     setAcceptedIndices((prev) => {
@@ -404,8 +417,8 @@ const [atsLoading, setAtsLoading] = React.useState(false);
       const m = meta[idx];
       const r = rewriteResults[idx];
       if (!r || !m) return;
-      const newText = r.after;
-      if (!newText || !r.changed) return;
+      const newText = editedTexts[idx] ?? r.after;
+      if (!newText || newText === r.before) return;
 
       if (m.type === "summary") {
         newData.summary = newText;
@@ -600,7 +613,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
       const m = meta[idx];
       const r = rewriteResults[idx];
       if (!r || !m) return;
-      const text = r.after;
+      const text = editedTexts[idx] ?? r.after;
       if (!text) return;
 
       if (m.type === "summary") {
@@ -619,7 +632,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
     });
 
     return assembled;
-  }, [hasRewrites, acceptedIndices, sourceResume, rewriteResults]);
+  }, [hasRewrites, acceptedIndices, sourceResume, rewriteResults, editedTexts]);
 
   /* ────────────────────────────────────────────────────────────────────── */
   /*                               Render                                   */
@@ -966,7 +979,7 @@ const [atsLoading, setAtsLoading] = React.useState(false);
                   const isAccepted = acceptedIndices.has(index);
                   const isRejected = rejectedIndices.has(index);
                   const beforeText = result.before || rewriteResults[index]?.before || "";
-                  const afterText = result.after || rewriteResults[index]?.after || beforeText;
+                  const afterText = editedTexts[index] ?? result.after ?? beforeText;
                   const changed = result.changed && beforeText !== afterText;
 
                   return (
@@ -996,11 +1009,45 @@ const [atsLoading, setAtsLoading] = React.useState(false);
                           <p className="text-2xs font-medium uppercase tracking-wider text-danger/80 mb-2">Before</p>
                           <p className="text-sm text-ink-muted leading-relaxed line-through decoration-danger/40">{beforeText}</p>
                         </div>
-                        <div className="rounded-xl border border-success/20 bg-success/[0.04] p-4">
-                          <p className="text-2xs font-medium uppercase tracking-wider text-success/80 mb-2">After</p>
-                          <p className="text-sm text-ink leading-relaxed">
-                            {changed ? wordDiff(beforeText, afterText) : afterText}
-                          </p>
+                        <div
+                          className={cn(
+                            "rounded-xl border p-4 cursor-text transition-colors group",
+                            editOpenIndices.has(index)
+                              ? "border-accent-500/40 bg-canvas-subtle"
+                              : "border-success/20 bg-success/[0.04]",
+                          )}
+                          onClick={() => {
+                            if (!isAccepted && !isRejected) {
+                              setEditOpenIndices((prev) => new Set(prev).add(index));
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-2xs font-medium uppercase tracking-wider text-success/80">After</p>
+                            {!isAccepted && !isRejected && !editOpenIndices.has(index) && (
+                              <span className="text-2xs text-ink-subtle flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Edit3 size={10} /> Click to edit
+                              </span>
+                            )}
+                          </div>
+                          {editOpenIndices.has(index) && !isAccepted && !isRejected ? (
+                            <textarea
+                              value={afterText}
+                              onChange={(e) => setEditedTexts((prev) => ({ ...prev, [index]: e.target.value }))}
+                              onBlur={() => {
+                                setEditOpenIndices((prev) => {
+                                  const s = new Set(prev);
+                                  s.delete(index);
+                                  return s;
+                                });
+                              }}
+                              rows={3}
+                              className="w-full bg-transparent text-sm text-ink leading-relaxed focus:outline-none resize-y"
+                              autoFocus
+                            />
+                          ) : (
+                            <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{afterText}</p>
+                          )}
                         </div>
                       </div>
 

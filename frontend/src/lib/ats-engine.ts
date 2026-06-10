@@ -83,6 +83,17 @@ function hasNumber(s: string): boolean {
   return /\b\d+(\.\d+)?(%|x|k|m|b|ms|s|sec|min|hr|h|req|users?|customers?|kpi|ms|p99|p50)?\b/i.test(s);
 }
 
+/** True for values that come from EMPTY_RESUME placeholders rather than real user input. */
+function isPlaceholder(s: string): boolean {
+  const t = s.trim();
+  return !t || /^your\b/i.test(t) || /^example\b/i.test(t) || t === "Job Title" || t === "City, State" || /\(555\)/.test(t);
+}
+
+/** True for email addresses that look like real user input (not placeholders). */
+function isRealEmail(email: string): boolean {
+  return !!email && !/^your@|@example\./i.test(email);
+}
+
 function bulletsOf(resume: ResumeData): string[] {
   const out: string[] = [];
   resume.experience.forEach((e) => e.bullets.forEach((b) => out.push(b)));
@@ -144,15 +155,17 @@ function scoreParseability(resume: ResumeData, content: string): DimensionScore 
     findings.push(`Resume is long (${wc} words). Recruiters spend ~7s on first scan.`);
   }
 
-  if (!resume.contact.email) { score -= 10; findings.push("Missing email — ATS won't be able to route you."); }
+  if (!isRealEmail(resume.contact.email)) { score -= 10; findings.push("Missing email — ATS won't be able to route you."); }
   else positive.push("Contact email present.");
-  if (!resume.contact.phone) { score -= 4; findings.push("No phone number on file."); }
-  if (!resume.contact.location) { score -= 3; findings.push("No location — many ATS filters require it."); }
+  if (!resume.contact.phone || isPlaceholder(resume.contact.phone)) { score -= 4; findings.push("No phone number on file."); }
+  if (!resume.contact.location || isPlaceholder(resume.contact.location)) { score -= 3; findings.push("No location — many ATS filters require it."); }
 
-  if (resume.experience.length === 0) { score -= 25; findings.push("No experience section. ATS will skip you."); }
-  else positive.push(`${resume.experience.length} experience entries.`);
+  const realExp = resume.experience.filter((e) => !isPlaceholder(e.company) || !isPlaceholder(e.role));
+  if (realExp.length === 0) { score -= 25; findings.push("No experience section. ATS will skip you."); }
+  else positive.push(`${realExp.length} experience entries.`);
 
-  if (resume.education.length === 0) {
+  const realEdu = resume.education.filter((e) => !isPlaceholder(e.school) || !isPlaceholder(e.degree));
+  if (realEdu.length === 0) {
     score -= 8;
     findings.push("No education section. Add at least one entry.");
   }
@@ -243,13 +256,21 @@ function scoreFormatting(resume: ResumeData): DimensionScore {
   if (avgLen > 250) { score -= 10; findings.push("Bullets are too long. Aim for 1-2 lines each."); }
   else if (avgLen < 30 && bullets.length > 0) { score -= 5; findings.push("Bullets are very short. Add more impact."); }
 
-  // Section ordering
-  if (resume.experience.length > 0 && resume.education.length > 0) positive.push("Standard section order: Experience, Education.");
+  // Section ordering — only credit when entries have real content
+  const realExp = resume.experience.filter((e) => !isPlaceholder(e.company) || !isPlaceholder(e.role));
+  const realEdu = resume.education.filter((e) => !isPlaceholder(e.school) || !isPlaceholder(e.degree));
+  if (realExp.length > 0 && realEdu.length > 0) positive.push("Standard section order: Experience, Education.");
 
-  // Dates
-  const noDates = resume.experience.filter((e) => !e.start || !e.end);
+  // Dates — only penalize missing dates on entries with real content
+  const noDates = realExp.filter((e) => !e.start || !e.end);
   if (noDates.length > 0) { score -= 8; findings.push(`${noDates.length} experience entries missing dates.`); }
-  else if (resume.experience.length > 0) positive.push("All experience entries have dates.");
+  else if (realExp.length > 0) positive.push("All experience entries have dates.");
+
+  // Penalize placeholder-only entries that waste ATS parsing cycles
+  if (resume.experience.length > 0 && realExp.length === 0) {
+    score -= 10;
+    findings.push("Experience entries exist but contain no real data. Fill in at least the company and role.");
+  }
 
   // Skills list
   if (resume.skills.length < 5) { score -= 8; findings.push("Fewer than 5 skills listed. Add more."); }

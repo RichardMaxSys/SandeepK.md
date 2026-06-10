@@ -82,77 +82,40 @@ export interface ResumeData {
 
 export const EMPTY_RESUME: ResumeData = {
   contact: {
-    name: "Sandeep K",
-    title: "Senior Software Engineer",
-    email: "sandeep.k@example.com",
-    phone: "+1 (416) 555-0123",
-    location: "Toronto, ON",
-    website: "sandeepk.dev",
-    linkedin: "linkedin.com/in/sandeepk",
-    github: "github.com/sandeepk",
+    name: "Your Name",
+    title: "Job Title",
+    email: "your@email.com",
+    phone: "+1 (555) 000-0000",
+    location: "City, State",
+    website: "",
+    linkedin: "",
+    github: "",
   },
-  summary:
-    "Senior software engineer with 6+ years building production Python services. Shipped a FastAPI platform handling 2M daily requests with 99.95% uptime. Reduced p99 latency by 40% through async pipeline redesign. Strong mentor — 4 engineers promoted to senior in 2024.",
+  summary: "",
   experience: [
     {
       id: "exp-1",
-      company: "CloudBase",
-      role: "Senior Software Engineer",
-      location: "Toronto, ON",
-      start: "2022",
-      end: "Present",
-      bullets: [
-        "Led migration of legacy monolith to FastAPI microservices across 4 teams",
-        "Cut p99 latency by 40% via async pipeline + Redis caching",
-        "Owned Kubernetes deployment topology (12 services, 3 regions)",
-        "Mentored 4 mid-level engineers; 2 promoted to senior in 2024",
-      ],
-    },
-    {
-      id: "exp-2",
-      company: "Maple Health",
-      role: "Software Engineer",
-      location: "Toronto, ON",
-      start: "2019",
-      end: "2022",
-      bullets: [
-        "Built patient-facing API serving 800k daily active users",
-        "Reduced infrastructure cost by 32% via GCP rightsizing",
-        "Introduced CI/CD pipelines reducing deploy time from 45 min to 6 min",
-      ],
+      company: "",
+      role: "",
+      location: "",
+      start: "",
+      end: "",
+      bullets: [""],
     },
   ],
   education: [
     {
       id: "edu-1",
-      school: "University of Toronto",
-      degree: "B.Sc.",
-      field: "Computer Science",
-      start: "2014",
-      end: "2018",
-      honors: "Dean's List 2016-2018",
+      school: "",
+      degree: "",
+      field: "",
+      start: "",
+      end: "",
     },
   ],
-  skills: [
-    "Python", "FastAPI", "PostgreSQL", "Redis", "Docker", "Kubernetes",
-    "AWS", "GCP", "CI/CD", "REST", "gRPC", "Linux", "Microservices",
-  ],
-  projects: [
-    {
-      id: "proj-1",
-      name: "openrec",
-      link: "github.com/sandeepk/openrec",
-      description: "Open-source recommendation engine (3.2k GitHub stars)",
-      bullets: [
-        "Built async Python pipeline processing 50k events/sec",
-        "Used by 12 companies in production",
-      ],
-      tech: ["Python", "FastAPI", "PostgreSQL", "Redis"],
-    },
-  ],
-  certifications: [
-    { id: "cert-1", name: "AWS Solutions Architect Associate", issuer: "AWS", date: "2023" },
-  ],
+  skills: [],
+  projects: [],
+  certifications: [],
 };
 
 /* -------------------------------------------------------------------------- */

@@ -10,7 +10,7 @@ const STRONG_RESUME: ResumeData = {
   contact: {
     name: "Sandeep K",
     title: "Senior Software Engineer",
-    email: "sandeep@example.com",
+    email: "sandeep.k@icloud.com",
     phone: "+1 416 555 0123",
     location: "Toronto, ON",
   },

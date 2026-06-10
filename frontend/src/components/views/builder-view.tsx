@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, Download, FileText, Eye, Edit3, Sparkles, X, CheckCircle2, Lock } from "lucide-react";
 import { Button, Card, Badge, cn } from "@/components/ui/base";
@@ -194,12 +195,16 @@ export const BuilderView: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <VersionSelector />
-          <div className="inline-flex h-9 rounded-lg border border-line bg-canvas-subtle p-0.5">
+
+          {/* View mode toggle — Edit / Preview */}
+          <div className="inline-flex h-9 rounded-lg border border-line-strong bg-canvas-subtle p-0.5 shadow-soft">
             <button
               onClick={() => setMode("edit")}
               className={cn(
                 "px-3 h-8 inline-flex items-center gap-1.5 text-xs font-medium rounded-md transition-colors",
-                mode === "edit" ? "bg-white/10 text-ink" : "text-ink-muted hover:text-ink",
+                mode === "edit"
+                  ? "bg-white/10 text-ink"
+                  : "text-ink-muted hover:text-ink",
               )}
             >
               <Edit3 size={12} /> Edit
@@ -208,14 +213,21 @@ export const BuilderView: React.FC = () => {
               onClick={() => setMode("preview")}
               className={cn(
                 "px-3 h-8 inline-flex items-center gap-1.5 text-xs font-medium rounded-md transition-colors",
-                mode === "preview" ? "bg-white/10 text-ink" : "text-ink-muted hover:text-ink",
+                mode === "preview"
+                  ? "bg-accent-500/15 text-accent-300 shadow-glow-accent/30"
+                  : "text-ink-muted hover:text-ink",
               )}
             >
               <Eye size={12} /> Preview
             </button>
           </div>
+
+          {/* Separator between view mode and export actions */}
+          <div className="w-px h-8 bg-line" />
+
+          {/* Export actions */}
           <Button
-            variant="secondary"
+            variant="outline"
             size="md"
             onClick={handleDownloadDocx}
             loading={generatingDocx}
@@ -333,6 +345,14 @@ export const BuilderView: React.FC = () => {
               <div className="text-center py-8 text-xs text-ink-muted">No templates match your search.</div>
             )}
           </div>
+
+          {/* Browse all templates link */}
+          <Link
+            href="/templates"
+            className="block text-center text-2xs font-medium text-accent-400 hover:text-accent-300 transition-colors py-2"
+          >
+            Browse all {TEMPLATES.length} templates &rarr;
+          </Link>
         </aside>
 
         {/* MIDDLE: editor / preview */}
